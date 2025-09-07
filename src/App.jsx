@@ -22,11 +22,13 @@ import {
 import Nav from './components/Nav'
 import { TrackCard } from './components/TrackCard'
 import { Player } from './components/Player'
+import YouTubePlayer from './components/YouTubePlayer'
 import { PageFade } from './components/PageFade'
 import { Toast } from './components/Toast'
 import { PromptPill, PromptPillKeyboardHandler } from './components/PromptPill'
 import { PromptDrawer } from './components/PromptDrawer'
 import { usePrompts } from './hooks/usePrompts'
+import { usePlayerStore } from './store/playerStore'
 import { listParent } from './lib/variants'
 import { dur, ease } from './lib/motion'
 
@@ -106,6 +108,9 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
   const [showToastLocal, setShowToastLocal] = useState(false)
   const [toastMessageLocal, setToastMessageLocal] = useState('')
 
+  // Initialize YouTube player store
+  const playerStore = usePlayerStore()
+
   // Initialize prompts system
   const prompts = usePrompts({
     mood: selectedMood?.promptMood || 'DeepWork',
@@ -158,13 +163,20 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
     setActiveTab('Focus')
   }
 
-  const handleMoodSelect = (mood) => {
+  const handleMoodSelect = async (mood) => {
     setSelectedMood(mood)
     setSessionDuration(mood.default_session_duration)
     setTimeRemaining(mood.default_session_duration * 60)
+    
+    // Load YouTube playlist for selected mood
+    try {
+      await playerStore.loadMood(mood.name)
+    } catch (error) {
+      showNotification('Failed to load music playlist')
+    }
   }
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     if (!selectedMood) return
     
     setIsSessionActive(true)
@@ -173,21 +185,35 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
       setTimeRemaining(sessionDuration * 60)
     }
     
-    setCurrentTrack({
+    // Update current track info from YouTube player
+    const currentYTTrack = playerStore.current
+    setCurrentTrack(currentYTTrack ? {
+      title: currentYTTrack.title,
+      artist: currentYTTrack.channel,
+      duration: 'YouTube'
+    } : {
       title: `${selectedMood.name} Focus Music`,
       artist: 'TuneIn Curated',
       duration: '1:23:45'
     })
 
+    // Start YouTube playback
+    playerStore.start()
     showNotification(`${selectedMood.name} session started`)
   }
 
   const handleTogglePlay = () => {
+    if (isPlaying) {
+      playerStore.pause()
+    } else {
+      playerStore.resume()
+    }
     setIsPlaying(!isPlaying)
     showNotification(isPlaying ? 'Paused' : 'Playing')
   }
 
   const handleStopSession = () => {
+    playerStore.stop()
     setIsSessionActive(false)
     setIsPlaying(false)
     setTimeRemaining(sessionDuration * 60)
@@ -267,11 +293,25 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
                 />
               )}
 
+              {/* YouTube Player */}
+              <YouTubePlayer
+                videoId={playerStore.current?.videoId}
+                onReady={(player) => playerStore.attach(player)}
+                onEnded={playerStore.onEnded}
+              />
+              
+              {/* Player Controls */}
               <Player 
                 playing={isPlaying}
                 onTogglePlay={handleTogglePlay}
-                onPrevious={() => showNotification('Previous track')}
-                onNext={() => showNotification('Next track')}
+                onPrevious={() => {
+                  playerStore.prev()
+                  showNotification('Previous track')
+                }}
+                onNext={() => {
+                  playerStore.next()
+                  showNotification('Next track')
+                }}
               />
               
               <motion.button
