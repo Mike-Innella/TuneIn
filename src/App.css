@@ -1,0 +1,73 @@
+/* Remove hardcoded dark styles - theme system handles backgrounds */
+
+
+/* TuneIn Custom Components */
+.mood-card {
+  @apply bg-card border-2 border-border rounded-xl p-6 cursor-pointer transition-all duration-300 relative overflow-hidden;
+}
+
+.mood-card::before {
+  content: '';
+  @apply absolute bottom-0 left-0 right-0 h-1 transform scale-x-0 transition-transform duration-300;
+}
+
+.mood-card:hover {
+  @apply border-primary shadow-lg transform -translate-y-1;
+}
+
+.mood-card:hover::before {
+  @apply scale-x-100;
+}
+
+.mood-card.selected {
+  @apply border-primary bg-primary/5;
+}
+
+.mood-card.selected::before {
+  @apply scale-x-100;
+}
+
+.mood-card-deep-work::before {
+  background-color: var(--mood-deep-work);
+}
+
+.mood-card-creative-flow::before {
+  background-color: var(--mood-creative);
+}
+
+.mood-card-light-focus::before {
+  background-color: var(--mood-light-focus);
+}
+
+.mood-card-learning::before {
+  background-color: var(--mood-learning);
+}
+
+.mood-card-meditation::before {
+  background-color: var(--mood-meditation);
+}
+
+.mood-card-energy-boost::before {
+  background-color: var(--mood-energy);
+}
+
+.timer-circle {
+  @apply relative w-48 h-48 mx-auto;
+}
+
+.timer-circle-progress {
+  @apply absolute inset-0 rounded-full transition-all duration-500;
+  background: conic-gradient(
+    hsl(var(--primary)) 0deg,
+    hsl(var(--primary)) var(--progress-angle, 0deg),
+    transparent var(--progress-angle, 0deg)
+  );
+}
+
+.timer-circle-inner {
+  @apply absolute top-2 left-2 right-2 bottom-2 bg-background rounded-full flex items-center justify-center shadow-inner;
+}
+
+.focus-session-active {
+  @apply bg-gradient-to-br from-primary/10 to-secondary/10;
+}
