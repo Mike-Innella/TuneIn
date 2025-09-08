@@ -11,6 +11,7 @@ export function usePlayerStore() {
   const [queue, setQueue] = useState([])
   const [index, setIndex] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [volume, setVolume] = useState(50)
   const playerRef = useRef(null) // holds the iframe player instance
 
   const loadMood = useCallback(async (m) => {
@@ -23,6 +24,14 @@ export function usePlayerStore() {
       ]
       setMood(m)
       setQueue(data.items?.length ? data.items : fallback)
+      setIndex(0)
+    } catch (error) {
+      const fallback = [
+        { videoId: 'jfKfPfyJRdk', title: 'lofi hip hop radio', channel: 'Lofi Girl', thumb: '' },
+        { videoId: 'DWcJFNfaw9c', title: 'Ambient Study Music', channel: 'MyNoise', thumb: '' }
+      ]
+      setMood(m)
+      setQueue(fallback)
       setIndex(0)
     } finally {
       setLoading(false)
@@ -40,11 +49,22 @@ export function usePlayerStore() {
   const detach = () => { playerRef.current = null }
 
   // session controls
-  const start = () => playerRef.current?.playVideo?.()
+  const start = () => {
+    playerRef.current?.playVideo?.()
+    playerRef.current?.setVolume?.(volume)
+  }
   const pause = () => playerRef.current?.pauseVideo?.()
-  const resume = () => playerRef.current?.playVideo?.()
+  const resume = () => {
+    playerRef.current?.playVideo?.()
+    playerRef.current?.setVolume?.(volume)
+  }
   const stop = () => {
     try { playerRef.current?.stopVideo?.() } catch {}
+  }
+
+  const setVolumeLevel = (vol) => {
+    setVolume(vol)
+    playerRef.current?.setVolume?.(vol)
   }
 
   const onEnded = () => next()
@@ -52,6 +72,7 @@ export function usePlayerStore() {
   return {
     mood, setMood, queue, index, current,
     loading, loadMood, next, prev, onEnded,
-    attach, detach, start, pause, resume, stop
+    attach, detach, start, pause, resume, stop,
+    volume, setVolumeLevel
   }
 }

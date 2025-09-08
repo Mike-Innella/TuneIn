@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge.jsx'
@@ -232,12 +232,8 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
     return ((totalSeconds - timeRemaining) / totalSeconds) * 100
   }
 
-  const TimerDisplay = () => (
-    <motion.div 
-      className="timer-circle"
-      initial={{ scale: 0.9, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1, transition: { duration: dur.l, ease: ease.out } }}
-    >
+  const TimerDisplay = useMemo(() => (
+    <div className="timer-circle">
       <div 
         className="timer-circle-progress"
         style={{ '--progress-angle': `${getProgressPercentage() * 3.6}deg` }}
@@ -254,8 +250,8 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
           )}
         </div>
       </div>
-    </motion.div>
-  )
+    </div>
+  ), [timeRemaining, selectedMood, sessionDuration])
 
   if (isSessionActive) {
     return (
@@ -264,7 +260,13 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Timer Section */}
             <div className="lg:col-span-2 flex flex-col items-center justify-center space-y-8">
-              <TimerDisplay />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {TimerDisplay}
+              </motion.div>
               
               {/* Prompt Components */}
               {!prompts.isExpanded && (
@@ -343,7 +345,17 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Volume2 size={16} className="text-zinc-400" />
-                      <Progress value={75} className="flex-1" />
+                      <Progress 
+                        value={playerStore.volume} 
+                        className="flex-1 cursor-pointer" 
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          const x = e.clientX - rect.left
+                          const percentage = (x / rect.width) * 100
+                          playerStore.setVolumeLevel(Math.max(0, Math.min(100, percentage)))
+                        }}
+                      />
+                      <span className="text-xs text-zinc-400 min-w-[3ch]">{Math.round(playerStore.volume)}</span>
                     </div>
                   </div>
                 </div>
