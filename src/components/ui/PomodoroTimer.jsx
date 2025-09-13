@@ -1,12 +1,13 @@
-import { Play, Pause, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { usePomodoro } from "../../hooks/usePomodoro";
 import { useGlobalHotkeys } from "../../hooks/useGlobalHotkeys";
+import { useIsMobile } from "../../hooks/use-mobile";
 import { SessionTypeSelect } from "./SessionTypeSelect";
 
 export function PomodoroPanel({ showToast, onToggleTheme, onShowHelp }) {
   const P = usePomodoro("Pomodoro");
+  const isMobile = useIsMobile();
   const ringDash = 283; // ~2πr for r≈45
   const dash = Math.max(0.001, P.progress) * ringDash;
 
@@ -68,33 +69,33 @@ export function PomodoroPanel({ showToast, onToggleTheme, onShowHelp }) {
     showToast?.(`Duration ${minutes > 0 ? 'increased' : 'decreased'} to ${newMinutes} minutes`);
   };
 
-  // Initialize hotkeys
+  // Initialize hotkeys (disabled on mobile)
   useGlobalHotkeys({
-    onStartPause: handleStartPause,
-    onReset: handleReset,
-    onStop: handleStop,
-    onSessionType: handleSessionType,
-    onQuickStart: handleQuickStart,
-    onToggleTheme: onToggleTheme,
-    onShowHelp: onShowHelp,
-    onToggleAutoAdvance: handleToggleAutoAdvance,
-    onAdjustDuration: handleAdjustDuration,
+    onStartPause: !isMobile ? handleStartPause : () => {},
+    onReset: !isMobile ? handleReset : () => {},
+    onStop: !isMobile ? handleStop : () => {},
+    onSessionType: !isMobile ? handleSessionType : () => {},
+    onQuickStart: !isMobile ? handleQuickStart : () => {},
+    onToggleTheme: !isMobile ? onToggleTheme : () => {},
+    onShowHelp: !isMobile ? onShowHelp : () => {},
+    onToggleAutoAdvance: !isMobile ? handleToggleAutoAdvance : () => {},
+    onAdjustDuration: !isMobile ? handleAdjustDuration : () => {},
     status: { currentType: P.kind }
   });
 
   return (
-    <section className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-md p-6">
+    <section className={`rounded-2xl surface border border-app-border shadow-md ${isMobile ? 'p-4' : 'p-6'}`}>
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-base font-semibold">Session</h2>
-        <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors">
+        <h2 className={`font-semibold text-app ${isMobile ? 'text-lg' : 'text-base'}`}>Session</h2>
+        <label className="flex items-center gap-2 text-sm cursor-pointer text-app-muted hover:text-app transition-colors">
           <input
             type="checkbox"
             checked={P.autoAdvance}
             onChange={(e) => P.setAutoAdvance(e.target.checked)}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="rounded border-app-border text-app-primary focus:ring-app-primary focus:border-app-primary"
           />
           Auto-advance
-          <span className="text-xs text-gray-500 ml-1">(Ctrl+A)</span>
+          {!isMobile && <span className="kbd-shortcut hidden md:inline ml-1">(Ctrl+A)</span>}
         </label>
       </div>
 
@@ -103,21 +104,23 @@ export function PomodoroPanel({ showToast, onToggleTheme, onShowHelp }) {
           value={P.kind}
           onChange={(k) => { P.setKind(k); P.reset(); }}
         />
-        <div className="mt-2 flex gap-2 text-xs text-gray-400 justify-center">
-          <span>1: Pomodoro</span>
-          <span>2: Short Break</span>
-          <span>3: Long Break</span>
-        </div>
+        {!isMobile && (
+          <div className="mt-2 flex gap-2 text-xs text-app-muted justify-center md:flex hidden">
+            <span className="kbd-shortcut">1: Pomodoro</span>
+            <span className="kbd-shortcut">2: Short Break</span>
+            <span className="kbd-shortcut">3: Long Break</span>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 grid place-items-center">
-        <div className="relative h-40 w-40">
+        <div className={`relative ${isMobile ? 'h-48 w-48' : 'h-40 w-40'}`}>
           <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100">
-            <circle 
-              cx="50" cy="50" r="45" 
-              fill="none" 
-              stroke="rgba(255,255,255,0.1)" 
-              strokeWidth="6" 
+            <circle
+              cx="50" cy="50" r="45"
+              fill="none"
+              className="stroke-gray-300 dark:stroke-slate-700"
+              strokeWidth="6"
             />
             <motion.circle
               cx="50" cy="50" r="45" 
@@ -133,65 +136,28 @@ export function PomodoroPanel({ showToast, onToggleTheme, onShowHelp }) {
           </svg>
           <div className="absolute inset-0 grid place-items-center">
             <div className="text-center">
-              <div className="text-3xl font-semibold tabular-nums text-white">
+              <div className={`font-semibold tabular-nums text-app ${isMobile ? 'text-4xl' : 'text-3xl'}`}>
                 {P.display}
               </div>
-              <div className="text-xs text-gray-400 mt-1">
-                {P.kind}
+              <div className={`text-app-muted mt-1 ${isMobile ? 'text-sm' : 'text-xs'}`}>
+                {P.syncedMood ? `${P.syncedMood.mood} (${P.syncedMood.duration}m)` : P.kind}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-center gap-3">
-        {P.status === "running" ? (
-          <button
-            onClick={P.pause}
-            className="h-12 w-12 rounded-full grid place-items-center bg-white/10 border border-white/20 hover:bg-white/20 transition-colors group relative"
-            aria-label="Pause (Space)"
-            title="Pause (Space)"
-          >
-            <Pause className="h-5 w-5 text-white" />
-          </button>
-        ) : P.status === "paused" ? (
-          <button
-            onClick={P.resume}
-            className="h-12 w-12 rounded-full grid place-items-center bg-white text-black shadow hover:bg-white/90 transition-colors group relative"
-            aria-label="Resume (Space)"
-            title="Resume (Space)"
-          >
-            <Play className="h-5 w-5" />
-          </button>
-        ) : (
-          <button
-            onClick={P.start}
-            className="h-12 w-12 rounded-full grid place-items-center bg-white text-black shadow hover:bg-white/90 transition-colors group relative"
-            aria-label="Start (Space)"
-            title="Start (Space)"
-          >
-            <Play className="h-5 w-5" />
-          </button>
-        )}
-
-        <button
-          onClick={P.reset}
-          className="h-12 w-12 rounded-full grid place-items-center bg-white/10 border border-white/20 hover:bg-white/20 transition-colors group relative"
-          aria-label="Reset (Ctrl+R)"
-          title="Reset (Ctrl+R)"
-        >
-          <RotateCcw className="h-5 w-5 text-white" />
-        </button>
-      </div>
 
       <div className="mt-4 text-center">
-        <div className="text-xs text-gray-400">
+        <div className="text-sm text-app">
           Completed Pomodoros: {P.completedPomodoros}
         </div>
-        <div className="text-xs text-gray-500 mt-1">
-          Press <kbd className="px-1 py-0.5 bg-gray-600 rounded text-xs">Space</kbd> to start/pause, 
-          <kbd className="px-1 py-0.5 bg-gray-600 rounded text-xs ml-1">+/-</kbd> to adjust time
-        </div>
+        {!isMobile && (
+          <div className="text-xs text-app-muted mt-1 hidden md:block">
+            Press <kbd className="kbd-shortcut">Space</kbd> to start/pause, 
+            <kbd className="kbd-shortcut ml-1">+/-</kbd> to adjust time
+          </div>
+        )}
       </div>
     </section>
   );
