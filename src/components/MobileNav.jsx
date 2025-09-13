@@ -73,7 +73,15 @@ export function MobileNav({ onNavigate }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Toggle play/pause
+                  // Toggle play/pause via player store
+                  if (playerStore.current) {
+                    const isPlaying = playerStore.current.playing || false;
+                    if (isPlaying) {
+                      playerStore.pause();
+                    } else {
+                      playerStore.resume();
+                    }
+                  }
                 }}
                 className="tap-target p-2 rounded-full primary"
                 aria-label="Play/Pause"
@@ -91,8 +99,16 @@ export function MobileNav({ onNavigate }) {
           
           {/* Home */}
           <button
-            onClick={() => onNavigate?.('home')}
-            className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 transition-colors"
+            onClick={() => {
+              onNavigate?.('home');
+              // Close any open sheets
+              updateUIState({
+                moodSheetOpen: false,
+                moreSheetOpen: false,
+                playerExpanded: false
+              });
+            }}
+            className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 active:bg-app-surface2 transition-colors"
             aria-label="Home"
           >
             <Home className="h-6 w-6 text-app-muted" />
@@ -102,7 +118,7 @@ export function MobileNav({ onNavigate }) {
           {/* Moods */}
           <button
             onClick={handleMoodsSheet}
-            className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 transition-colors"
+            className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 active:bg-app-surface2 transition-colors"
             aria-label="Moods"
           >
             <Music className="h-6 w-6 text-app-muted" />
@@ -112,8 +128,16 @@ export function MobileNav({ onNavigate }) {
 
           {/* Timer */}
           <button
-            onClick={() => onNavigate?.('timer')}
-            className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 transition-colors"
+            onClick={() => {
+              onNavigate?.('timer');
+              // Close any open sheets
+              updateUIState({
+                moodSheetOpen: false,
+                moreSheetOpen: false,
+                playerExpanded: false
+              });
+            }}
+            className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 active:bg-app-surface2 transition-colors"
             aria-label="Timer"
           >
             <Timer className="h-6 w-6 text-app-muted" />
@@ -123,7 +147,7 @@ export function MobileNav({ onNavigate }) {
           {/* More */}
           <button
             onClick={handleMoreSheet}
-            className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 transition-colors"
+            className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 active:bg-app-surface2 transition-colors"
             aria-label="More"
           >
             <MoreHorizontal className="h-6 w-6 text-app-muted" />
