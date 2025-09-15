@@ -1,5 +1,120 @@
-/* Remove hardcoded dark styles - theme system handles backgrounds */
+:root { color-scheme: light dark; }
 
+/* App theme is controlled by <html data-theme="light|dark"> */
+html[data-theme="light"] {
+  --bg:            246 248 255;   /* #F6F8FF */
+  --surface:       255 255 255;   /* cards */
+  --surface-2:     241 245 249;   /* alt surface */
+  --border:        229 231 235;
+  --text:          26 26 26;
+  --muted:         74 74 74;
+  --primary:       37 99 235;     /* blue-600 */
+  --primary-fg:    255 255 255;
+  --hero-from:     59 130 246;    /* blue-500 */
+  --hero-to:       139 92 246;    /* violet-500 */
+}
+
+html[data-theme="dark"] {
+  --bg:            6 12 24;       /* deep navy */
+  --surface:       30 41 59;      /* slate-800 */
+  --surface-2:     15 23 42;      /* slate-900 */
+  --border:        51 65 85;      /* slate-700 */
+  --text:          241 245 249;   /* slate-100 */
+  --muted:         148 163 184;   /* slate-400 */
+  --primary:       59 130 246;    /* blue-500 */
+  --primary-fg:    255 255 255;
+  --hero-from:     15 23 42;      /* slate-900 */
+  --hero-to:       30 41 59;      /* slate-800 */
+}
+
+/* Utilities */
+.bg-app          { background-color: rgb(var(--bg)); }
+.surface         { background-color: rgb(var(--surface) / 0.72); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.surface-2       { background-color: rgb(var(--surface-2) / 0.68); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.border-app      { border-color:     rgb(var(--border)); }
+.text-app        { color:            rgb(var(--text)); }
+.text-muted      { color:            rgb(var(--muted)); }
+.primary         { background-color: rgb(var(--primary)); color: rgb(var(--primary-fg)); }
+
+/* Mobile utilities for safe area and tap targets */
+@supports (padding: max(0px)) {
+  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 16px); }
+  .pt-safe { padding-top: max(env(safe-area-inset-top), 16px); }
+  .pl-safe { padding-left: max(env(safe-area-inset-left), 16px); }
+  .pr-safe { padding-right: max(env(safe-area-inset-right), 16px); }
+}
+
+.tap-target { min-width: 44px; min-height: 44px; }
+
+/* Semantic text utilities */
+.text-primary { color: rgb(var(--text)); }
+.text-secondary { color: rgb(var(--muted)); }
+.text-accent { color: rgb(var(--primary)); }
+
+/* Unified button styles */
+.btn-primary {
+  background-color: rgb(var(--primary));
+  color: rgb(var(--primary-fg));
+  font-weight: 500;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+.btn-primary:hover {
+  background-color: rgb(var(--primary) / 0.9);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.btn-secondary {
+  background-color: rgb(var(--surface-2) / 0.8);
+  color: rgb(var(--text));
+  font-weight: 500;
+  border: 1px solid rgb(var(--border));
+  transition: all 0.15s ease;
+}
+.btn-secondary:hover {
+  background-color: rgb(var(--surface-2));
+  border-color: rgb(var(--border) / 0.8);
+}
+
+/* Ghost button styles for session selectors */
+.btn-ghost {
+  background-color: rgb(var(--surface));
+  color: rgb(var(--text));
+  border: 1px solid rgb(var(--border));
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.btn-ghost:hover {
+  background-color: rgb(var(--surface-2));
+  border-color: rgb(var(--border) / 0.8);
+}
+
+.btn-ghost.active {
+  background-color: rgb(var(--primary) / 0.1);
+  border-color: rgb(var(--primary));
+  color: rgb(var(--primary));
+  box-shadow: 0 0 0 2px rgb(var(--primary) / 0.2);
+}
+
+/* Unified card styles */
+.card-enhanced {
+  background-color: rgb(var(--surface) / 0.8);
+  border: 1px solid rgb(var(--border));
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+/* Keyboard shortcut styling */
+.kbd-shortcut {
+  background-color: rgb(var(--border) / 0.4);
+  color: rgb(var(--text));
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
 
 /* TuneIn Custom Components */
 .mood-card {

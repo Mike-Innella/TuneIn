@@ -98,7 +98,7 @@ export function MoodSheet({ onMoodSelect }) {
       allowSwipeClose={true}
     >
       <div className="p-4 space-y-4">
-        <p className="text-sm text-app-muted mb-6">
+        <p className="text-sm text-app-text-muted mb-6">
           Select a focus state to customize your session duration and music.
         </p>
         
@@ -117,14 +117,14 @@ export function MoodSheet({ onMoodSelect }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-base font-medium text-app">
+                      <h3 className="text-base font-medium text-app-text">
                         {mood.name}
                       </h3>
-                      <span className="text-sm text-app-muted">
+                      <span className="text-sm text-app-text-muted">
                         {mood.default_session_duration}m
                       </span>
                     </div>
-                    <p className="text-sm text-app-muted mt-1">
+                    <p className="text-sm text-app-text-muted mt-1">
                       {mood.description}
                     </p>
                   </div>
@@ -135,7 +135,7 @@ export function MoodSheet({ onMoodSelect }) {
         </div>
 
         <div className="pt-4 border-t border-app-border">
-          <p className="text-xs text-app-muted text-center">
+          <p className="text-xs text-app-text-muted text-center">
             Your selection will be saved and automatically applied to future sessions.
           </p>
         </div>

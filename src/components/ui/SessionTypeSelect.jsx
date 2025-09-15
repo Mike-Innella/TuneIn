@@ -13,9 +13,8 @@ export function SessionTypeSelect({
             key={p.kind}
             onClick={() => onChange(p.kind)}
             className={cn(
-              "px-3 py-1.5 rounded-full border text-sm transition-colors",
-              "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800",
-              active ? "ring-2 ring-blue-500 dark:ring-blue-400" : "hover:bg-gray-50 dark:hover:bg-gray-700"
+              "px-3 py-1.5 rounded-full text-sm btn-ghost",
+              active && "active"
             )}
             data-active={active}
           >

@@ -101,10 +101,10 @@ export function PlayerSheet() {
 
         {/* Track Info */}
         <div className="text-center space-y-1">
-          <h3 className="text-xl font-semibold text-app line-clamp-2">
+          <h3 className="text-xl font-semibold text-app-text line-clamp-2">
             {current?.title || "No track selected"}
           </h3>
-          <p className="text-app-muted">
+          <p className="text-app-text-muted">
             {current?.channel || "Unknown artist"}
           </p>
         </div>
@@ -114,7 +114,7 @@ export function PlayerSheet() {
           <div className="w-full h-1 bg-app-border/40 rounded-full">
             <div className="h-1 bg-app-primary rounded-full w-1/3" />
           </div>
-          <div className="flex justify-between text-xs text-app-muted">
+          <div className="flex justify-between text-xs text-app-text-muted">
             <span>1:23</span>
             <span>3:45</span>
           </div>
@@ -127,7 +127,7 @@ export function PlayerSheet() {
             className="tap-target p-3 rounded-full bg-app-surface2/80 hover:bg-app-surface2 transition-colors border border-app-border"
             aria-label="Previous track"
           >
-            <SkipBack className="h-6 w-6 text-app-muted" />
+            <SkipBack className="h-6 w-6 text-app-text-muted" />
           </button>
 
           <button
@@ -147,14 +147,14 @@ export function PlayerSheet() {
             className="tap-target p-3 rounded-full bg-app-surface2/80 hover:bg-app-surface2 transition-colors border border-app-border"
             aria-label="Next track"
           >
-            <SkipForward className="h-6 w-6 text-app-muted" />
+            <SkipForward className="h-6 w-6 text-app-text-muted" />
           </button>
         </div>
 
         {/* Volume Control */}
         <div className="space-y-2">
           <div className="flex items-center space-x-3">
-            <Volume2 className="h-5 w-5 text-app-muted" />
+            <Volume2 className="h-5 w-5 text-app-text-muted" />
             <div 
               className="flex-1 h-2 bg-app-border/40 rounded-full cursor-pointer"
               onClick={handleVolumeChange}
@@ -164,7 +164,7 @@ export function PlayerSheet() {
                 style={{ width: `${playerStore.volume}%` }}
               />
             </div>
-            <span className="text-sm text-app-muted min-w-[3ch]">
+            <span className="text-sm text-app-text-muted min-w-[3ch]">
               {Math.round(playerStore.volume)}
             </span>
           </div>
@@ -172,7 +172,7 @@ export function PlayerSheet() {
 
         {/* Queue Preview */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-app-muted">
+          <h4 className="text-sm font-medium text-app-text-muted">
             Up Next
           </h4>
           <div className="space-y-2">
@@ -180,10 +180,10 @@ export function PlayerSheet() {
               <div key={i} className="flex items-center space-x-3 p-2 rounded-lg bg-app-surface2/50 border border-app-border">
                 <div className="w-10 h-10 bg-app-border/40 rounded flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-app truncate">
+                  <p className="text-sm font-medium text-app-text truncate">
                     {track.title}
                   </p>
-                  <p className="text-xs text-app-muted truncate">
+                  <p className="text-xs text-app-text-muted truncate">
                     {track.channel}
                   </p>
                 </div>
@@ -195,7 +195,7 @@ export function PlayerSheet() {
         {/* Gesture hint */}
         {uiState.gesturesEnabled && (
           <div className="text-center">
-            <p className="text-xs text-app-muted">
+            <p className="text-xs text-app-text-muted">
               Swipe left/right to change tracks
             </p>
           </div>

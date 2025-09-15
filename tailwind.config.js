@@ -53,17 +53,29 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
 
-        // New semantic tokens for light mode polish
+        // App semantic design tokens
+        app: {
+          DEFAULT: 'var(--app-bg)',
+          bg: 'var(--app-bg)',
+          surface: 'var(--app-surface)',
+          surface2: 'var(--app-surface2)',
+          border: 'var(--app-border)',
+          text: 'var(--app-text)',
+          muted: 'var(--app-text-muted)',
+          primary: 'var(--app-primary)',
+          'primary-fg': 'var(--app-primary-fg)',
+        },
+        // Legacy tokens for compatibility
         bg: {
-          DEFAULT: 'hsl(0 0% 100%)',         // light surface
-          subtle: 'hsl(220 14% 97%)',        // cards
+          DEFAULT: 'hsl(0 0% 100%)',
+          subtle: 'hsl(220 14% 97%)',
           hover: 'hsl(220 14% 95%)',
         },
         text: {
-          DEFAULT: 'hsl(222 47% 11%)',       // primary
-          muted: 'hsl(215 16% 46%)',         // secondary
+          DEFAULT: 'hsl(222 47% 11%)',
+          muted: 'hsl(215 16% 46%)',
           soft: 'hsl(215 15% 56%)',
-          onGradient: 'hsl(210 40% 98%)',    // text on blue gradient
+          onGradient: 'hsl(210 40% 98%)',
         },
         brand: {
           50:  '#eef6ff',
@@ -82,6 +94,9 @@ module.exports = {
           yellow: '#f59e0b',
           pink: '#ec4899',
         },
+      },
+      fontFamily: {
+        cursive: ['Dancing Script', 'Brush Script MT', 'Lucida Handwriting', 'cursive'],
       },
       borderRadius: {
         lg: "var(--radius)",

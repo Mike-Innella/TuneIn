@@ -33,7 +33,11 @@ export function ThemeProvider({ children }) {
   const setTheme = (newTheme) => {
     setThemeState(newTheme)
     localStorage.setItem('theme', newTheme)
-    document.documentElement.setAttribute('data-theme', newTheme)
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
   }
 
   const toggleTheme = () => {
@@ -42,7 +46,11 @@ export function ThemeProvider({ children }) {
 
   // Apply theme on mount and changes
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
   }, [theme])
 
   // Listen for system theme changes

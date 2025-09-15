@@ -3,12 +3,35 @@
 @tailwind utilities;
 
 /* Performance & A11y Optimizations */
-* { 
-  -webkit-tap-highlight-color: transparent; 
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
-html { 
+html {
   scroll-behavior: smooth;
+}
+
+/* Global hover enhancements */
+@layer utilities {
+  .hover-lift {
+    @apply transition-all duration-300 transform-gpu hover:scale-105 hover:shadow-lg;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-app-primary/20;
+  }
+
+  .hover-fade {
+    @apply transition-all duration-300 hover:opacity-80;
+  }
+
+  .hover-brighten {
+    @apply transition-all duration-300 hover:brightness-110;
+  }
+
+  .interactive {
+    @apply transition-all duration-300 transform-gpu hover:scale-105 active:scale-95 cursor-pointer;
+  }
 }
 
 :root { 
@@ -51,87 +74,70 @@ html {
 
 @layer base {
   :root {
-    /* Original shadcn/ui tokens */
+    /* Unified color system for light mode */
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
-
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-
     --primary: 222 47% 11%;
     --primary-foreground: 210 40% 98%;
-
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
-
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-
     --accent: 210 40% 96%;
     --accent-foreground: 222 47% 11%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222 47% 11%;
-
     --radius: 0.5rem;
 
-    /* New semantic tokens for light mode */
-    --bg: 0 0% 100%;
-    --bg-subtle: 220 14% 97%;
-    --bg-hover: 220 14% 95%;
-    
-    --text: 222 47% 11%;
-    --text-muted: 215 16% 46%;
-    --text-soft: 215 15% 56%;
-    --text-onGradient: 210 40% 98%;
+    /* App-specific semantic tokens */
+    --app-bg: #ffffff;
+    --app-surface: #f8fafc;
+    --app-surface2: #f1f5f9;
+    --app-border: #e2e8f0;
+    --app-text: #0f172a;
+    --app-text-muted: #64748b;
+    --app-primary: #3b82f6;
+    --app-primary-fg: #ffffff;
   }
 
   .dark {
-    /* Original shadcn/ui tokens */
+    /* Unified color system for dark mode */
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
 
-    /* New semantic tokens for dark mode */
-    --bg: 222.2 84% 4.9%;
-    --bg-subtle: 217.2 32.6% 17.5%;
-    --bg-hover: 217.2 32.6% 20%;
-    
-    --text: 210 40% 98%;
-    --text-muted: 215 20.2% 65.1%;
-    --text-soft: 215 20.2% 55%;
-    --text-onGradient: 210 40% 98%;
+    /* App-specific semantic tokens for dark mode */
+    --app-bg: #0f172a;
+    --app-surface: #1e293b;
+    --app-surface2: #334155;
+    --app-border: #475569;
+    --app-text: #f8fafc;
+    --app-text-muted: #94a3b8;
+    --app-primary: #3b82f6;
+    --app-primary-fg: #ffffff;
   }
 }
 
@@ -140,6 +146,41 @@ html {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-app text-app-text;
+  }
+}
+
+@layer components {
+  /* Consistent component styles */
+  .surface {
+    @apply bg-app-surface border-app-border;
+  }
+
+  .surface2 {
+    @apply bg-app-surface2 border-app-border;
+  }
+
+  .btn-primary {
+    @apply bg-app-primary text-app-primary-fg border-app-primary hover:opacity-90;
+  }
+
+  .btn-secondary {
+    @apply bg-app-surface text-app-text border-app-border hover:bg-app-surface2;
+  }
+
+  .text-app {
+    @apply text-app-text;
+  }
+
+  .text-muted {
+    @apply text-app-muted;
+  }
+
+  .bg-app {
+    @apply bg-app-bg;
+  }
+
+  .border-app {
+    @apply border-app-border;
   }
 }

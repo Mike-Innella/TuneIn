@@ -89,7 +89,7 @@ export function MoreSheet({ onToggleTheme, onShowHelp }) {
                   <IconComponent className="h-5 w-5 text-app-muted" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-base font-medium text-app">
+                  <div className="text-base font-medium text-app-text">
                     {item.label}
                   </div>
                   {item.description && (
@@ -115,7 +115,7 @@ export function MoreSheet({ onToggleTheme, onShowHelp }) {
               <Volume2 className="h-5 w-5 text-app-muted" />
             </div>
             <div className="flex-1">
-              <div className="text-base font-medium text-app">
+              <div className="text-base font-medium text-app-text">
                 Master Volume
               </div>
             </div>

@@ -21,7 +21,7 @@ export function Modal({ open, onClose, children }) {
           />
           <motion.div
             {...slideUp(16)}
-            className="relative mx-auto mt-24 w-full max-w-md rounded-2xl bg-zinc-900/95 border border-white/10 p-6 shadow-[var(--shadow)]"
+            className="relative mx-auto mt-24 w-full max-w-md rounded-2xl bg-app-surface/95 border border-app-border p-6 shadow-[var(--shadow)]"
           >
             {children}
           </motion.div>

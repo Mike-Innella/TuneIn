@@ -108,7 +108,7 @@ export function Sheet({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/60 dark:bg-black/60 backdrop-blur-sm z-40"
             onClick={onClose}
           />
 
@@ -122,7 +122,7 @@ export function Sheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className={`fixed bottom-0 left-0 right-0 z-50 surface border-t border-app-border rounded-t-2xl shadow-2xl max-h-[90vh] ${className}`}
+            className={`fixed bottom-[80px] left-0 right-0 z-50 surface border-t border-app-border rounded-t-2xl shadow-2xl max-h-[calc(90vh-80px)] ${className}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -138,7 +138,7 @@ export function Sheet({
             {/* Header */}
             {title && (
               <div className="flex items-center justify-between px-4 py-2 border-b border-app-border">
-                <h2 className="text-lg font-semibold text-app">
+                <h2 className="text-lg font-semibold text-app-text">
                   {title}
                 </h2>
                 <button
@@ -146,7 +146,7 @@ export function Sheet({
                   className="tap-target p-2 rounded-full hover:bg-app-surface2/50 transition-colors"
                   aria-label="Close"
                 >
-                  <X className="h-5 w-5 text-app-muted" />
+                  <X className="h-5 w-5 text-app-text-muted" />
                 </button>
               </div>
             )}

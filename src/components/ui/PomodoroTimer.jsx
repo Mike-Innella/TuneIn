@@ -86,8 +86,8 @@ export function PomodoroPanel({ showToast, onToggleTheme, onShowHelp }) {
   return (
     <section className={`rounded-2xl surface border border-app-border shadow-md ${isMobile ? 'p-4' : 'p-6'}`}>
       <div className="flex items-center justify-between gap-4">
-        <h2 className={`font-semibold text-app ${isMobile ? 'text-lg' : 'text-base'}`}>Session</h2>
-        <label className="flex items-center gap-2 text-sm cursor-pointer text-app-muted hover:text-app transition-colors">
+        <h2 className={`font-semibold text-app-text ${isMobile ? 'text-lg' : 'text-base'}`}>Session</h2>
+        <label className="flex items-center gap-2 text-sm cursor-pointer text-app-muted hover:text-app-text transition-colors">
           <input
             type="checkbox"
             checked={P.autoAdvance}
@@ -136,7 +136,7 @@ export function PomodoroPanel({ showToast, onToggleTheme, onShowHelp }) {
           </svg>
           <div className="absolute inset-0 grid place-items-center">
             <div className="text-center">
-              <div className={`font-semibold tabular-nums text-app ${isMobile ? 'text-4xl' : 'text-3xl'}`}>
+              <div className={`font-semibold tabular-nums text-app-text ${isMobile ? 'text-4xl' : 'text-3xl'}`}>
                 {P.display}
               </div>
               <div className={`text-app-muted mt-1 ${isMobile ? 'text-sm' : 'text-xs'}`}>
@@ -149,7 +149,7 @@ export function PomodoroPanel({ showToast, onToggleTheme, onShowHelp }) {
 
 
       <div className="mt-4 text-center">
-        <div className="text-sm text-app">
+        <div className="text-sm text-app-text">
           Completed Pomodoros: {P.completedPomodoros}
         </div>
         {!isMobile && (

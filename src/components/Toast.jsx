@@ -8,7 +8,7 @@ export function Toast({ show, text }) {
         {show && (
           <motion.div 
             {...slideUp(10)} 
-            className="rounded-full px-4 py-2 bg-white text-black shadow-[var(--shadow)] font-medium"
+            className="rounded-full px-4 py-2 bg-app-surface text-app-text border border-app-border shadow-[var(--shadow)] font-medium"
           >
             {text}
           </motion.div>

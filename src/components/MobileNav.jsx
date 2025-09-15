@@ -63,10 +63,10 @@ export function MobileNav({ onNavigate }) {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-lg flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-app truncate">
+                <p className="text-sm font-medium text-app-text truncate">
                   {playerStore.current.title}
                 </p>
-                <p className="text-xs text-app-muted truncate">
+                <p className="text-xs text-app-text-muted truncate">
                   {playerStore.current.channel}
                 </p>
               </div>
@@ -111,8 +111,8 @@ export function MobileNav({ onNavigate }) {
             className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 active:bg-app-surface2 transition-colors"
             aria-label="Home"
           >
-            <Home className="h-6 w-6 text-app-muted" />
-            <span className="text-xs text-app-muted mt-1">Home</span>
+            <Home className="h-6 w-6 text-app-text-muted" />
+            <span className="text-xs text-app-text-muted mt-1">Home</span>
           </button>
 
           {/* Moods */}
@@ -121,8 +121,8 @@ export function MobileNav({ onNavigate }) {
             className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 active:bg-app-surface2 transition-colors"
             aria-label="Moods"
           >
-            <Music className="h-6 w-6 text-app-muted" />
-            <span className="text-xs text-app-muted mt-1">Moods</span>
+            <Music className="h-6 w-6 text-app-text-muted" />
+            <span className="text-xs text-app-text-muted mt-1">Moods</span>
           </button>
 
 
@@ -140,8 +140,8 @@ export function MobileNav({ onNavigate }) {
             className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 active:bg-app-surface2 transition-colors"
             aria-label="Timer"
           >
-            <Timer className="h-6 w-6 text-app-muted" />
-            <span className="text-xs text-app-muted mt-1">Timer</span>
+            <Timer className="h-6 w-6 text-app-text-muted" />
+            <span className="text-xs text-app-text-muted mt-1">Timer</span>
           </button>
 
           {/* More */}
@@ -150,8 +150,8 @@ export function MobileNav({ onNavigate }) {
             className="tap-target flex flex-col items-center justify-center p-2 rounded-lg hover:bg-app-surface2/50 active:bg-app-surface2 transition-colors"
             aria-label="More"
           >
-            <MoreHorizontal className="h-6 w-6 text-app-muted" />
-            <span className="text-xs text-app-muted mt-1">More</span>
+            <MoreHorizontal className="h-6 w-6 text-app-text-muted" />
+            <span className="text-xs text-app-text-muted mt-1">More</span>
           </button>
         </div>
       </nav>
@@ -172,7 +172,7 @@ export function MobileNav({ onNavigate }) {
             className="surface rounded-2xl p-6 shadow-2xl max-w-sm w-full border border-app-border"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-app mb-4 text-center">
+            <h3 className="text-lg font-semibold text-app-text mb-4 text-center">
               Quick Mood Switch
             </h3>
             <div className="grid grid-cols-2 gap-3">
@@ -182,10 +182,10 @@ export function MobileNav({ onNavigate }) {
                   onClick={() => handleMoodSelect(mood)}
                   className="tap-target p-3 rounded-lg bg-app-surface2/80 hover:bg-app-surface2 transition-colors text-center border border-app-border"
                 >
-                  <div className="text-sm font-medium text-app">
+                  <div className="text-sm font-medium text-app-text">
                     {mood.name}
                   </div>
-                  <div className="text-xs text-app-muted">
+                  <div className="text-xs text-app-text-muted">
                     {mood.duration}m
                   </div>
                 </button>
@@ -193,7 +193,7 @@ export function MobileNav({ onNavigate }) {
             </div>
             <button
               onClick={() => setShowMoodPicker(false)}
-              className="w-full mt-4 py-2 text-app-muted text-sm"
+              className="w-full mt-4 py-2 text-app-text-muted text-sm"
             >
               Cancel
             </button>

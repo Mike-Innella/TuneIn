@@ -1,26 +1,58 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getConfig } from "../types/session";
+import { getConfig } from "../types/session.ts";
+import { DURATION_BY_MOOD, DEFAULT_POMODORO_DURATION } from "../lib/focusConfig.js";
 
 export function usePomodoro(initial = "Pomodoro") {
   const [kind, setKind] = useState(initial);
   const [status, setStatus] = useState("idle"); // "idle" | "running" | "paused" | "done"
-  const [secondsLeft, setSecondsLeft] = useState(getConfig(initial).minutes * 60);
+  const [syncedMood, setSyncedMood] = useState(null);
   const [completedPomodoros, setCompletedPomodoros] = useState(0);
   const [autoAdvance, setAutoAdvance] = useState(true);
 
   const tickRef = useRef(null);
 
+  // Calculate initial duration safely
+  const initialDuration = useMemo(() => {
+    return getConfig(initial).minutes * 60;
+  }, [initial]);
+
+  const [secondsLeft, setSecondsLeft] = useState(initialDuration);
+
   // sync duration when kind changes in idle/done
   useEffect(() => {
     if (status === "idle" || status === "done") {
-      setSecondsLeft(getConfig(kind).minutes * 60);
+      // Clear mood sync if switching away from Pomodoro
+      if (kind !== "Pomodoro") {
+        setSyncedMood(null);
+      }
+      const duration = (kind === "Pomodoro" && syncedMood) 
+        ? syncedMood.duration * 60 
+        : getConfig(kind).minutes * 60;
+      setSecondsLeft(duration);
     }
-  }, [kind, status]);
+  }, [kind, status, syncedMood]);
 
   const start = useCallback(() => {
     if (status !== "running") setStatus("running");
     window.dispatchEvent(new CustomEvent("session:start", { detail: { kind } }));
   }, [status, kind]);
+
+  // Listen for mood selection events to sync timer duration
+  useEffect(() => {
+    const handleMoodSelected = (event) => {
+      const { mood, duration } = event.detail;
+      if (mood && duration && kind === "Pomodoro") {
+        setSecondsLeft(duration * 60);
+        setSyncedMood({ mood, duration });
+        window.dispatchEvent(new CustomEvent("pomodoro:mood-synced", { 
+          detail: { mood, duration, kind } 
+        }));
+      }
+    };
+
+    window.addEventListener("mood:selected", handleMoodSelected);
+    return () => window.removeEventListener("mood:selected", handleMoodSelected);
+  }, [kind]);
 
   const pause = useCallback(() => {
     if (status === "running") {
@@ -38,8 +70,10 @@ export function usePomodoro(initial = "Pomodoro") {
 
   const reset = useCallback(() => {
     setStatus("idle");
-    setSecondsLeft(getConfig(kind).minutes * 60);
-  }, [kind]);
+    // Reset to mood duration if synced, otherwise use default pomodoro duration
+    const duration = syncedMood ? syncedMood.duration * 60 : getConfig(kind).minutes * 60;
+    setSecondsLeft(duration);
+  }, [kind, syncedMood]);
 
   const setMinutes = useCallback((m) => {
     setSecondsLeft(Math.max(1, Math.round(m * 60)));
@@ -67,7 +101,7 @@ export function usePomodoro(initial = "Pomodoro") {
           return 0;
         }
         // midpoint signal (for prompts later)
-        const total = getConfig(kind).minutes * 60;
+        const total = syncedMood ? syncedMood.duration * 60 : getConfig(kind).minutes * 60;
         const nextVal = s - 1;
         if (nextVal === Math.floor(total / 2)) {
           window.dispatchEvent(new CustomEvent("session:midpoint", { detail: { kind } }));
@@ -102,9 +136,9 @@ export function usePomodoro(initial = "Pomodoro") {
   const secs = secondsLeft % 60;
   const display = useMemo(() => `${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}`, [mins, secs]);
   const progress = useMemo(() => {
-    const total = getConfig(kind).minutes * 60;
-    return 1 - secondsLeft / total; // 0..1
-  }, [kind, secondsLeft]);
+    const total = syncedMood ? syncedMood.duration * 60 : getConfig(kind).minutes * 60;
+    return Math.max(0, Math.min(1, 1 - secondsLeft / total)); // 0..1
+  }, [kind, secondsLeft, syncedMood]);
 
   return {
     kind, setKind,
@@ -112,6 +146,7 @@ export function usePomodoro(initial = "Pomodoro") {
     autoAdvance, setAutoAdvance,
     secondsLeft, setMinutes,
     mins, secs, display, progress,
-    completedPomodoros
+    completedPomodoros,
+    syncedMood
   };
 }

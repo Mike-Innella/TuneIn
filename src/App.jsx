@@ -3,11 +3,11 @@ import { Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge.jsx'
 import { Progress } from '@/components/ui/progress.jsx'
-import { 
-  Play, 
-  Pause, 
-  SkipForward, 
-  Volume2, 
+import {
+  Play,
+  Pause,
+  SkipForward,
+  Volume2,
   Settings,
   Brain,
   Lightbulb,
@@ -17,6 +17,17 @@ import {
   Zap,
   User
 } from 'lucide-react'
+
+// Auth components
+import AuthGate from './components/AuthGate'
+import AccountPanel from './components/AccountPanel'
+import ResetPassword from './components/ResetPassword'
+
+// YouTube Music System
+import { PlayerProvider } from './player/PlayerContext'
+import PlayerBar from './components/PlayerBar'
+import MoodPicker from './components/MoodPicker'
+import MobileCommandBar from './components/MobileCommandBar'
 
 // Existing components
 import Nav from './components/Nav'
@@ -36,6 +47,16 @@ import { dur, ease } from './lib/motion'
 import { Header } from './components/ui/Header'
 import { PomodoroPanel } from './components/ui/PomodoroTimer'
 import Account from './pages/Account'
+import { ErrorBoundary } from './components/ErrorBoundary'
+
+// Mobile components
+import { MobileNav } from './components/MobileNav'
+import { PlayerSheet } from './components/PlayerSheet'
+import { MoodSheet } from './components/MoodSheet'
+import { MoreSheet } from './components/MoreSheet'
+import { useIsMobile } from './hooks/use-mobile'
+import { useUIState } from './state/ui'
+import { ThemeProvider } from './components/ThemeProvider'
 
 import './App.css'
 
@@ -107,6 +128,7 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
   const [activeTab, setActiveTab] = useState('Focus')
   const [showToastLocal, setShowToastLocal] = useState(false)
   const [toastMessageLocal, setToastMessageLocal] = useState('')
+  const isMobile = useIsMobile()
 
   // Initialize YouTube player store
   const playerStore = usePlayerStore()
@@ -167,6 +189,14 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
     setSelectedMood(mood)
     setSessionDuration(mood.default_session_duration)
     setTimeRemaining(mood.default_session_duration * 60)
+    
+    // Dispatch event to sync pomodoro timer with mood duration
+    window.dispatchEvent(new CustomEvent("mood:selected", {
+      detail: { 
+        mood: mood.name, 
+        duration: mood.default_session_duration 
+      }
+    }));
     
     // Load YouTube playlist for selected mood
     try {
@@ -238,13 +268,13 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
         className="timer-circle-progress"
         style={{ '--progress-angle': `${getProgressPercentage() * 3.6}deg` }}
       />
-      <div className="timer-circle-inner backdrop-blur-md bg-black/20 border border-white/10">
+      <div className="timer-circle-inner bg-app-surface2/80 border border-app-border">
         <div className="text-center">
-          <div className="text-4xl font-bold font-mono text-white">
+          <div className="text-4xl font-bold font-mono text-app-text">
             {formatTime(timeRemaining)}
           </div>
           {selectedMood && (
-            <div className="text-sm text-zinc-400 mt-2">
+            <div className="text-sm text-app-muted mt-2">
               {selectedMood.name}
             </div>
           )}
@@ -319,7 +349,7 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
               <motion.button
                 onClick={handleStopSession}
                 whileTap={{ scale: 0.95 }}
-                className="px-6 py-2 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors"
+                className="px-6 py-2 rounded-lg btn-secondary"
               >
                 End Session
               </motion.button>
@@ -333,18 +363,18 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
             >
               {/* Current Track */}
               {currentTrack && (
-                <div className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-md p-6">
-                  <h3 className="text-lg font-medium mb-4 text-white">Now Playing</h3>
+                <div className="rounded-2xl surface border border-app-border p-6">
+                  <h3 className="text-lg font-medium mb-4 text-app-text">Now Playing</h3>
                   <div className="space-y-4">
-                    <div className="w-full h-24 bg-white/10 rounded-xl flex items-center justify-center">
-                      <div className="text-zinc-400 text-sm">Album Art</div>
+                    <div className="w-full h-24 bg-app-surface2/50 rounded-xl flex items-center justify-center">
+                      <div className="text-app-muted text-sm">Album Art</div>
                     </div>
                     <div>
-                      <h4 className="font-medium text-white">{currentTrack.title}</h4>
-                      <p className="text-sm text-zinc-400">{currentTrack.artist}</p>
+                      <h4 className="font-medium text-app-text">{currentTrack.title}</h4>
+                      <p className="text-sm text-app-muted">{currentTrack.artist}</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Volume2 size={16} className="text-zinc-400" />
+                      <Volume2 size={16} className="text-app-muted" />
                       <Progress 
                         value={playerStore.volume} 
                         className="flex-1 cursor-pointer" 
@@ -355,27 +385,27 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
                           playerStore.setVolumeLevel(Math.max(0, Math.min(100, percentage)))
                         }}
                       />
-                      <span className="text-xs text-zinc-400 min-w-[3ch]">{Math.round(playerStore.volume)}</span>
+                      <span className="text-xs text-app-muted min-w-[3ch]">{Math.round(playerStore.volume)}</span>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Session Settings */}
-              <div className="rounded-2xl bg-white/6 border border-white/10 backdrop-blur-md p-6">
-                <h3 className="text-lg font-medium mb-4 text-white">Session Settings</h3>
+              <div className="rounded-2xl surface border border-app-border p-6">
+                <h3 className="text-lg font-medium mb-4 text-app-text">Session Settings</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-zinc-400">Session Type</span>
-                    <Badge variant="outline" className="border-white/20 text-white">Mood-based</Badge>
+                    <span className="text-sm text-app-muted">Session Type</span>
+                    <Badge variant="outline" className="border-app-border text-app-text">Mood-based</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-zinc-400">Duration</span>
-                    <span className="text-sm font-medium text-white">{sessionDuration} min</span>
+                    <span className="text-sm text-app-muted">Duration</span>
+                    <span className="text-sm font-medium text-app-text">{sessionDuration} min</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-zinc-400">Progress</span>
-                    <span className="text-sm font-medium text-white">{Math.round(getProgressPercentage())}%</span>
+                    <span className="text-sm text-app-muted">Progress</span>
+                    <span className="text-sm font-medium text-app-text">{Math.round(getProgressPercentage())}%</span>
                   </div>
                 </div>
               </div>
@@ -398,52 +428,38 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
 
   return (
     <PageFade>
-      <main className="container mx-auto px-4 py-8">
+      <main className={`container mx-auto px-4 py-8 ${isMobile ? 'pb-24' : ''}`}>
         <div className="max-w-6xl mx-auto grid gap-8">
           
           {/* Pomodoro Timer Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'} gap-8`}>
+            <div className={isMobile ? 'col-span-1' : 'lg:col-span-2'}>
               <PomodoroPanel 
                 showToast={showNotification}
                 onToggleTheme={onToggleTheme}
                 onShowHelp={onShowHelp}
               />
             </div>
-            <div className="space-y-6">
-              {/* Additional controls or info can go here */}
-            </div>
+            {!isMobile && (
+              <div className="space-y-6">
+                {/* Additional controls or info can go here */}
+              </div>
+            )}
           </div>
 
-          {/* Mood Selection */}
-          <motion.div 
+          {/* YouTube Music System */}
+          <motion.div
             className="text-center mb-12"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1, transition: { duration: dur.m, ease: ease.out } }}
           >
-            <h2 className="text-4xl font-bold mb-4 text-text-onGradient">Select a mood</h2>
-            <p className="text-text-onGradient/70 text-lg">
+            <h2 className="text-4xl font-bold mb-4 text-app-text drop-shadow-sm">Select a mood</h2>
+            <p className="text-app-muted text-lg">
               Choose your focus state to get started with curated music
             </p>
           </motion.div>
 
-          <motion.div 
-            variants={listParent}
-            initial="initial"
-            animate="animate"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
-          >
-            {MOODS.map((mood) => (
-              <TrackCard
-                key={mood.id}
-                title={mood.name}
-                desc={mood.description}
-                icon={mood.icon}
-                isSelected={selectedMood?.id === mood.id}
-                onClick={() => handleMoodSelect(mood)}
-              />
-            ))}
-          </motion.div>
+          <MoodPicker />
 
           {/* Start Session */}
           <AnimatePresence>
@@ -455,15 +471,15 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
                 exit={{ y: -20, opacity: 0, scale: 0.95 }}
                 transition={{ duration: dur.m, ease: ease.out }}
               >
-                <div className="max-w-md mx-auto rounded-2xl bg-white/6 border border-white/10 backdrop-blur-md p-8">
-                  <h3 className="text-xl font-semibold text-white mb-2">Ready to Focus?</h3>
-                  <p className="text-zinc-400 mb-6">
+                <div className="max-w-md mx-auto rounded-2xl surface border border-app-border shadow-md p-8">
+                  <h3 className="text-xl font-semibold text-app-text mb-2">Ready to Focus?</h3>
+                  <p className="text-app-muted mb-6">
                     Start a {sessionDuration}-minute {selectedMood.name.toLowerCase()} session
                   </p>
                   <motion.button
                     onClick={handleStartSession}
                     whileTap={{ scale: 0.95 }}
-                    className="w-full py-3 px-6 rounded-full bg-white text-black font-medium flex items-center justify-center gap-2 hover:bg-white/90 transition-colors shadow-[var(--shadow)]"
+                    className="w-full py-3 px-6 rounded-lg btn-primary flex items-center justify-center gap-2"
                   >
                     <Play size={20} />
                     Start Focus Session
@@ -484,6 +500,8 @@ function App() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showHotkeys, setShowHotkeys] = useState(false);
+  const isMobile = useIsMobile();
+  const [uiState, updateUIState] = useUIState();
 
   const handleShowToast = (message) => {
     setToastMessage(message);
@@ -504,29 +522,97 @@ function App() {
     setShowHotkeys(true);
   };
 
+  const handleMobileNavigate = (section) => {
+    // Handle mobile navigation
+    switch (section) {
+      case 'home':
+        // Navigate to home - could scroll to top or change route
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        break;
+      case 'timer':
+        // Scroll to timer section
+        const timerSection = document.querySelector('section');
+        if (timerSection) {
+          timerSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleMoodSelect = (moodName) => {
+    // Find the mood object by name
+    const mood = MOODS.find(m => m.name === moodName);
+    if (mood) {
+      // Trigger existing mood selection logic
+      const moodSelectEvent = new CustomEvent('mood:selected', {
+        detail: { mood: mood.name, duration: mood.default_session_duration }
+      });
+      window.dispatchEvent(moodSelectEvent);
+      handleShowToast(`${mood.name} mood selected`);
+    }
+  };
+
+  const handleDurationSet = (minutes) => {
+    // Dispatch timer duration event
+    window.dispatchEvent(new CustomEvent('timer:duration-set', {
+      detail: { duration: minutes }
+    }));
+    handleShowToast(`Timer set to ${minutes} minutes`);
+  };
+
   return (
-    <div 
-      className="min-h-screen text-foreground"
-      style={{
-        background: 'linear-gradient(135deg, var(--hero-from) 0%, var(--hero-to) 100%)'
-      }}
-    >
-      <Header showHotkeys={showHotkeys} onCloseHotkeys={() => setShowHotkeys(false)} />
-      <Routes>
-        <Route 
-          path="/" 
-          element={
-            <HomePage 
-              showToast={handleShowToast} 
-              onToggleTheme={handleToggleTheme}
-              onShowHelp={handleShowHelp}
-            />
-          } 
-        />
-        <Route path="/account" element={<Account />} />
-      </Routes>
-      <Toast show={showToast} text={toastMessage} />
-    </div>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <PlayerProvider>
+          <div className="min-h-screen bg-app text-app-text">
+            <Routes>
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route
+                path="/*"
+                element={
+                  <AuthGate>
+                    <Header showHotkeys={showHotkeys} onCloseHotkeys={() => setShowHotkeys(false)} />
+                    <Routes>
+                      <Route
+                        path="/"
+                        element={
+                          <HomePage
+                            showToast={handleShowToast}
+                            onToggleTheme={handleToggleTheme}
+                            onShowHelp={handleShowHelp}
+                          />
+                        }
+                      />
+                      <Route path="/account" element={<Account />} />
+                    </Routes>
+                    <Toast show={showToast} text={toastMessage} />
+
+                    {/* YouTube Player Bar */}
+                    <PlayerBar />
+
+                    {/* Mobile Command Bar */}
+                    {isMobile && (
+                      <MobileCommandBar
+                        onSetMood={handleMoodSelect}
+                        onSetDuration={handleDurationSet}
+                        onOpenProfile={() => {
+                          // Use React Router navigation instead of window.location
+                          const event = new CustomEvent('navigate:account');
+                          window.dispatchEvent(event);
+                          handleShowToast('Opening profile...');
+                        }}
+                      />
+                    )}
+                  </AuthGate>
+                }
+              />
+            </Routes>
+          </div>
+        </PlayerProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 
