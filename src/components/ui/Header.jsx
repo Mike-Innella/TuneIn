@@ -14,8 +14,13 @@ export function Header() {
     <>
       <header className="sticky top-0 z-50 border-b border-app-border surface">
         <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="font-semibold tracking-tight text-app-text flex items-center gap-3 group transition-all duration-300 hover:scale-105">
-            <img src="/image.png" alt="TuneIn Logo" className="h-20 w-20 object-contain rounded-full transition-all duration-300 group-hover:rotate-12 group-hover:shadow-lg" />
+          <Link to="/" className="font-semibold tracking-tight text-app-text flex items-center gap-3 group transition-all duration-300 hover:scale-105 overflow-visible">
+            <img
+              src="/logo.png"
+              alt="TuneIn logo"
+              className="h-8 w-auto block object-contain align-middle pointer-events-none"
+              style={{ maxWidth: '140px', minWidth: '80px' }}
+            />
             <span className="text-2xl font-cursive text-app-text transition-all duration-300 group-hover:text-app-primary group-hover:drop-shadow-sm">TuneIn</span>
           </Link>
           <nav className="hidden md:flex items-center gap-3">

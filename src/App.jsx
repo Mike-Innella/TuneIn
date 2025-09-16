@@ -58,7 +58,6 @@ import { useIsMobile } from './hooks/use-mobile'
 import { useUIState } from './state/ui'
 import { ThemeProvider } from './components/ThemeProvider'
 
-import './App.css'
 
 // Mock data for moods
 const MOODS = [

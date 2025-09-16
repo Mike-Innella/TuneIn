@@ -49,13 +49,12 @@ export function ThemeProvider({ children }) {
 
   // Apply theme on mount and changes
   useEffect(() => {
-    console.log('ThemeProvider: useEffect triggered with theme:', theme)
+    const root = document.documentElement
+    root.setAttribute('data-theme', theme)
     if (theme === 'dark') {
-      document.documentElement.classList.add('dark')
-      console.log('ThemeProvider: useEffect added dark class, current classes:', document.documentElement.className)
+      root.classList.add('dark')
     } else {
-      document.documentElement.classList.remove('dark')
-      console.log('ThemeProvider: useEffect removed dark class, current classes:', document.documentElement.className)
+      root.classList.remove('dark')
     }
   }, [theme])
 

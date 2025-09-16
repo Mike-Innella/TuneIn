@@ -83,7 +83,7 @@ export function PlayerSheet() {
       <div className="p-4 space-y-6" ref={gestureRef}>
         {/* Album Art */}
         <div className="flex justify-center">
-          <div className="w-64 h-64 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl shadow-lg flex items-center justify-center">
+          <div className="w-64 h-64 bg-gradient-to-br from-indigo-400 to-violet-400 dark:from-slate-700 dark:to-slate-500 rounded-2xl shadow-lg flex items-center justify-center">
             {current?.thumb ? (
               <img
                 src={current.thumb}

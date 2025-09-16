@@ -61,7 +61,7 @@ export function MobileNav({ onNavigate }) {
         >
           <div className="surface rounded-lg p-3 shadow-lg border border-app-border">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-lg flex-shrink-0" />
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-violet-400 dark:from-slate-700 dark:to-slate-500 rounded-lg flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-app-text truncate">
                   {playerStore.current.title}
