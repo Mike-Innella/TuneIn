@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge.jsx'
@@ -172,6 +172,43 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
     }
   }
 
+  const handleMoodSelect = useCallback(async (mood) => {
+    setSelectedMood(mood)
+    setSessionDuration(mood.default_session_duration)
+    setTimeRemaining(mood.default_session_duration * 60)
+
+    // Dispatch event to sync pomodoro timer with mood duration
+    window.dispatchEvent(new CustomEvent("mood:selected", {
+      detail: {
+        mood: mood.name,
+        duration: mood.default_session_duration
+      }
+    }));
+
+    // Load YouTube playlist for selected mood
+    try {
+      await playerStore.loadMood(mood.name)
+    } catch (error) {
+      showNotification('Failed to load music playlist')
+    }
+  }, [playerStore, showNotification])
+
+  // Listen for mood selection events from MoodPicker
+  useEffect(() => {
+    const handleMoodSelected = (event) => {
+      const { mood, duration } = event.detail
+
+      // Find the corresponding mood object from MOODS array
+      const moodObj = MOODS.find(m => m.name === mood)
+      if (moodObj) {
+        handleMoodSelect(moodObj)
+      }
+    }
+
+    window.addEventListener('mood:selected', handleMoodSelected)
+    return () => window.removeEventListener('mood:selected', handleMoodSelected)
+  }, [handleMoodSelect])
+
   const handleHomeClick = () => {
     if (isSessionActive) {
       setIsSessionActive(false)
@@ -182,27 +219,6 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
     setSelectedMood(null)
     setTimeRemaining(0)
     setActiveTab('Focus')
-  }
-
-  const handleMoodSelect = async (mood) => {
-    setSelectedMood(mood)
-    setSessionDuration(mood.default_session_duration)
-    setTimeRemaining(mood.default_session_duration * 60)
-    
-    // Dispatch event to sync pomodoro timer with mood duration
-    window.dispatchEvent(new CustomEvent("mood:selected", {
-      detail: { 
-        mood: mood.name, 
-        duration: mood.default_session_duration 
-      }
-    }));
-    
-    // Load YouTube playlist for selected mood
-    try {
-      await playerStore.loadMood(mood.name)
-    } catch (error) {
-      showNotification('Failed to load music playlist')
-    }
   }
 
   const handleStartSession = async () => {
