@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { usePlayer } from '../player/PlayerContext';
+import { useGlobalAudio } from '../audio/GlobalAudioProvider';
 import { MOOD_QUERIES } from '../config/moods';
 import { MOOD_DURATIONS } from '../lib/focusConfig';
 import { Loader2 } from 'lucide-react';
 
 export default function MoodPicker() {
   const { load } = usePlayer();
+  const { load: loadGlobalAudio } = useGlobalAudio();
   const [loading, setLoading] = useState(null);
 
   const handleMoodSelect = async (mood) => {
@@ -22,10 +24,32 @@ export default function MoodPicker() {
 
       if (data.items && data.items.length > 0) {
         load(data.items, 0);
+        // Also load first track into global audio player for preview
+        const firstTrack = data.items[0];
+        if (firstTrack) {
+          await loadGlobalAudio({
+            src: '', // YouTube URLs can't be played directly in audio tag
+            title: firstTrack.title,
+            artist: firstTrack.channel,
+            artwork: firstTrack.thumb,
+            sourceType: 'youtube'
+          });
+        }
       } else {
         // Fallback to mock data for development
         const mockTracks = generateMockTracks(mood);
         load(mockTracks, 0);
+        // Load first mock track
+        const firstTrack = mockTracks[0];
+        if (firstTrack) {
+          await loadGlobalAudio({
+            src: '', // YouTube URLs can't be played directly in audio tag
+            title: firstTrack.title,
+            artist: firstTrack.channel,
+            artwork: '',
+            sourceType: 'youtube'
+          });
+        }
       }
 
       // Dispatch mood selection event for Pomodoro integration
@@ -39,6 +63,18 @@ export default function MoodPicker() {
       // Use mock data as fallback
       const mockTracks = generateMockTracks(mood);
       load(mockTracks, 0);
+
+      // Load first mock track into global audio
+      const firstTrack = mockTracks[0];
+      if (firstTrack) {
+        await loadGlobalAudio({
+          src: '', // YouTube URLs can't be played directly in audio tag
+          title: firstTrack.title,
+          artist: firstTrack.channel,
+          artwork: '',
+          sourceType: 'youtube'
+        });
+      }
 
       // Still dispatch the mood selection event
       const duration = MOOD_DURATIONS[mood] || 25;

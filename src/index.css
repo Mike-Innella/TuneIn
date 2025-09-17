@@ -32,6 +32,11 @@ html {
   .interactive {
     @apply transition-all duration-300 transform-gpu hover:scale-105 active:scale-95 cursor-pointer;
   }
+
+  /* Modal styles */
+  .modal-open #app-shell {
+    filter: blur(3px);
+  }
 }
 
 :root { 

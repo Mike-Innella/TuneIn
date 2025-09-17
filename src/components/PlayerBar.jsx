@@ -1,83 +1,132 @@
-import { usePlayer } from '../player/PlayerContext';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import { Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { useState } from 'react'
+import { useGlobalAudio } from '../audio/GlobalAudioProvider'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2 } from 'lucide-react'
+import PlayerModal from './player/PlayerModal'
 
 export default function PlayerBar() {
-  const player = usePlayer();
-  const { current, isPlaying, play, pause, prev, next, volume, setVol } = player;
+  const { state, play, pause, seek, setVolume, setMuted } = useGlobalAudio()
+  const [modalOpen, setModalOpen] = useState(false)
 
-  // Enable keyboard shortcuts
-  useKeyboardShortcuts(player);
+  const onPlayPause = () => (state.playing ? pause() : play())
 
-  if (!current) {
-    return null;
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Don't show if no track is loaded
+  if (!state.src && !state.title) {
+    return null
   }
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[min(680px,95vw)] z-[9997]
-                    rounded-2xl shadow-lg backdrop-blur-xl bg-app-surface/95 border border-app-border
-                    text-app-text px-4 py-3 flex items-center gap-3">
-      {current.thumb && (
-        <img
-          src={current.thumb}
-          alt=""
-          className="w-10 h-10 rounded-lg object-cover hover:scale-110 transition-all duration-300 cursor-pointer"
-        />
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="truncate text-sm font-medium text-app-text">{current.title}</div>
-        <div className="truncate text-xs text-app-muted">{current.channel}</div>
-      </div>
+    <>
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[min(900px,92vw)] rounded-2xl border border-app-border bg-app-surface/90 backdrop-blur px-4 py-3 shadow-lg">
+        <div className="flex items-center gap-3">
+          {/* Artwork + metadata */}
+          <div className="h-10 w-10 rounded-lg bg-app-surface2/40 overflow-hidden flex-shrink-0">
+            {state.artwork ? (
+              <img src={state.artwork} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-app-text-muted text-xs">
+                🎵
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-app-text text-sm font-medium">
+              {state.title || 'No track'}
+            </div>
+            <div className="truncate text-app-text-muted text-xs">
+              {state.artist || ''}
+            </div>
+          </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={prev}
-          className="p-2 hover:bg-app-surface2 hover:scale-110 hover:shadow-lg rounded-lg transition-all duration-300 transform-gpu text-app-text"
-          aria-label="Previous"
-        >
-          <SkipBack size={18} />
-        </button>
+          {/* Main controls */}
+          <div className="flex items-center gap-2">
+            <button
+              className="p-2 hover:bg-app-surface2 rounded-lg transition-colors"
+              aria-label="Previous"
+            >
+              <SkipBack size={16} className="text-app-text" />
+            </button>
+            <button
+              className="p-2 hover:bg-app-surface2 rounded-lg transition-colors"
+              onClick={onPlayPause}
+              disabled={!state.canPlay && state.sourceType !== 'youtube'}
+              aria-label={state.playing ? "Pause" : "Play"}
+            >
+              {state.playing ? <Pause size={18} className="text-app-text" /> : <Play size={18} className="text-app-text" />}
+            </button>
+            <button
+              className="p-2 hover:bg-app-surface2 rounded-lg transition-colors"
+              aria-label="Next"
+            >
+              <SkipForward size={16} className="text-app-text" />
+            </button>
+          </div>
+        </div>
 
-        {isPlaying ? (
-          <button
-            onClick={pause}
-            className="p-2 hover:bg-app-surface2 hover:scale-110 hover:shadow-lg rounded-lg transition-all duration-300 transform-gpu text-app-text"
-            aria-label="Pause"
-          >
-            <Pause size={20} />
-          </button>
-        ) : (
-          <button
-            onClick={play}
-            className="p-2 hover:bg-app-surface2 hover:scale-110 hover:shadow-lg rounded-lg transition-all duration-300 transform-gpu text-app-text"
-            aria-label="Play"
-          >
-            <Play size={20} />
-          </button>
-        )}
-
-        <button
-          onClick={next}
-          className="p-2 hover:bg-app-surface2 hover:scale-110 hover:shadow-lg rounded-lg transition-all duration-300 transform-gpu text-app-text"
-          aria-label="Next"
-        >
-          <SkipForward size={18} />
-        </button>
-      </div>
-
-      <div className="flex items-center gap-2 min-w-0">
-        <Volume2 size={16} className="text-app-muted flex-shrink-0 hover:text-app-primary transition-colors duration-300" />
+        {/* Progress bar */}
         <input
           type="range"
           min={0}
-          max={100}
-          value={volume}
-          onChange={(e) => setVol(Number(e.target.value))}
-          className="w-20 accent-app-primary hover:scale-105 transition-transform duration-300"
-          aria-label="Volume"
+          max={state.duration || 0}
+          value={state.currentTime || 0}
+          onChange={(e) => seek(Number(e.target.value))}
+          className="w-full mt-3 h-1 bg-app-surface2 rounded-lg appearance-none cursor-pointer accent-app-primary"
+          disabled={state.sourceType === 'youtube'}
         />
-        <span className="text-xs text-app-muted w-8 text-right">{volume}</span>
+
+        {/* Bottom row - Volume + expand */}
+        <div className="mt-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              className="p-1 hover:bg-app-surface2 rounded transition-colors"
+              onClick={() => setMuted(!state.muted)}
+              aria-label={state.muted ? "Unmute" : "Mute"}
+            >
+              {state.muted ? <VolumeX size={14} className="text-app-text" /> : <Volume2 size={14} className="text-app-text" />}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={state.muted ? 0 : state.volume}
+              onChange={(e) => {
+                const newVolume = Number(e.target.value)
+                setVolume(newVolume)
+                if (newVolume > 0 && state.muted) {
+                  setMuted(false)
+                }
+              }}
+              className="w-20 h-1 bg-app-surface2 rounded-lg appearance-none cursor-pointer accent-app-primary"
+            />
+            <span className="text-xs text-app-text-muted min-w-[3ch]">
+              {Math.round((state.muted ? 0 : state.volume) * 100)}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-app-text-muted">
+              {formatTime(state.currentTime)} / {formatTime(state.duration)}
+            </span>
+            <button
+              className="px-3 py-1 bg-app-primary text-app-primary-fg hover:brightness-110 rounded-lg text-sm transition-all"
+              onClick={() => setModalOpen(true)}
+              aria-haspopup="dialog"
+            >
+              <Maximize2 size={14} className="inline mr-1" />
+              Expand
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+
+      {/* Modal */}
+      {modalOpen && <PlayerModal onClose={() => setModalOpen(false)} />}
+    </>
+  )
 }

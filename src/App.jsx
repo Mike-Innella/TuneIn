@@ -23,8 +23,9 @@ import AuthGate from './components/AuthGate'
 import AccountPanel from './components/AccountPanel'
 import ResetPassword from './components/ResetPassword'
 
-// YouTube Music System
+// Audio System
 import { PlayerProvider } from './player/PlayerContext'
+import { GlobalAudioProvider } from './audio/GlobalAudioProvider'
 import PlayerBar from './components/PlayerBar'
 import MoodPicker from './components/MoodPicker'
 import MobileCommandBar from './components/MobileCommandBar'
@@ -32,7 +33,6 @@ import MobileCommandBar from './components/MobileCommandBar'
 // Existing components
 import Nav from './components/Nav'
 import { TrackCard } from './components/TrackCard'
-import { Player } from './components/Player'
 import YouTubePlayer from './components/YouTubePlayer'
 import { PageFade } from './components/PageFade'
 import { Toast } from './components/Toast'
@@ -340,26 +340,6 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
                 />
               )}
 
-              {/* YouTube Player */}
-              <YouTubePlayer
-                videoId={playerStore.current?.videoId}
-                onReady={(player) => playerStore.attach(player)}
-                onEnded={playerStore.onEnded}
-              />
-              
-              {/* Player Controls */}
-              <Player 
-                playing={isPlaying}
-                onTogglePlay={handleTogglePlay}
-                onPrevious={() => {
-                  playerStore.prev()
-                  showNotification('Previous track')
-                }}
-                onNext={() => {
-                  playerStore.next()
-                  showNotification('Next track')
-                }}
-              />
               
               <motion.button
                 onClick={handleStopSession}
@@ -580,8 +560,9 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <PlayerProvider>
-          <div className="min-h-screen bg-app text-app-text">
+        <GlobalAudioProvider>
+          <PlayerProvider>
+            <div className="min-h-screen bg-app text-app-text">
             <Routes>
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route
@@ -624,8 +605,9 @@ function App() {
                 }
               />
             </Routes>
-          </div>
-        </PlayerProvider>
+            </div>
+          </PlayerProvider>
+        </GlobalAudioProvider>
       </ThemeProvider>
     </ErrorBoundary>
   )
