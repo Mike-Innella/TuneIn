@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Heart } from "lucide-react";
 import { Sheet } from "./Sheet";
-import { usePlayerStore } from "../store/playerStore";
+// import { usePlayerStore } from "../store/playerStore";
+import { usePlayer } from "../player/PlayerContext";
 import { useUIState } from "../state/ui";
 import { useIsMobile } from "../hooks/use-mobile";
 import { useEffect, useRef } from "react";
@@ -9,7 +10,7 @@ import { useEffect, useRef } from "react";
 export function PlayerSheet() {
   const isMobile = useIsMobile();
   const [uiState, updateUIState] = useUIState();
-  const playerStore = usePlayerStore();
+  const yt = usePlayer();
   const gestureRef = useRef(null);
 
   const isOpen = isMobile && uiState.playerExpanded;
@@ -22,7 +23,7 @@ export function PlayerSheet() {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    playerStore.setVolumeLevel(percentage);
+    yt.setVolume(percentage / 100);
     updateUIState({ volume: percentage });
   };
 
@@ -50,10 +51,10 @@ export function PlayerSheet() {
         e.preventDefault();
         if (deltaX > 0) {
           // Swipe right - previous track
-          playerStore.prev();
+          yt.prev();
         } else {
           // Swipe left - next track
-          playerStore.next();
+          yt.next();
         }
       }
     };
@@ -66,11 +67,11 @@ export function PlayerSheet() {
       element.removeEventListener('touchstart', handleTouchStart);
       element.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isOpen, uiState.gesturesEnabled, playerStore]);
+  }, [isOpen, uiState.gesturesEnabled, yt]);
 
   if (!isMobile) return null;
 
-  const current = playerStore.current;
+  const current = yt.current;
 
   return (
     <Sheet
@@ -123,7 +124,7 @@ export function PlayerSheet() {
         {/* Controls */}
         <div className="flex items-center justify-center space-x-6">
           <button
-            onClick={playerStore.prev}
+            onClick={yt.prev}
             className="tap-target p-3 rounded-full bg-app-surface2/80 hover:bg-app-surface2 transition-colors border border-app-border"
             aria-label="Previous track"
           >
@@ -132,18 +133,20 @@ export function PlayerSheet() {
 
           <button
             onClick={() => {
-              // Toggle play/pause based on current state
-              // This would need to be connected to actual player state
-              console.log('Toggle play/pause');
+              if (yt.isPlaying) {
+                yt.pause();
+              } else {
+                yt.play();
+              }
             }}
             className="tap-target p-4 rounded-full primary hover:bg-app-primary/90 transition-colors shadow-lg"
             aria-label="Play/Pause"
           >
-            <Play className="h-8 w-8" />
+            {yt.isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
           </button>
 
           <button
-            onClick={playerStore.next}
+            onClick={yt.next}
             className="tap-target p-3 rounded-full bg-app-surface2/80 hover:bg-app-surface2 transition-colors border border-app-border"
             aria-label="Next track"
           >
@@ -161,11 +164,11 @@ export function PlayerSheet() {
             >
               <div 
                 className="h-2 bg-app-primary rounded-full"
-                style={{ width: `${playerStore.volume}%` }}
+                style={{ width: `${yt.volume * 100}%` }}
               />
             </div>
             <span className="text-sm text-app-text-muted min-w-[3ch]">
-              {Math.round(playerStore.volume)}
+              {Math.round(yt.volume * 100)}
             </span>
           </div>
         </div>
@@ -176,7 +179,7 @@ export function PlayerSheet() {
             Up Next
           </h4>
           <div className="space-y-2">
-            {playerStore.queue.slice(playerStore.index + 1, playerStore.index + 4).map((track, i) => (
+            {yt.queue.slice(yt.index + 1, yt.index + 4).map((track, i) => (
               <div key={i} className="flex items-center space-x-3 p-2 rounded-lg bg-app-surface2/50 border border-app-border">
                 <div className="w-10 h-10 bg-app-border/40 rounded flex-shrink-0" />
                 <div className="flex-1 min-w-0">

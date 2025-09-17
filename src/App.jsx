@@ -29,17 +29,18 @@ import { GlobalAudioProvider } from './audio/GlobalAudioProvider'
 import PlayerBar from './components/PlayerBar'
 import MoodPicker from './components/MoodPicker'
 import MobileCommandBar from './components/MobileCommandBar'
+import * as yt from './player/ytController'
 
 // Existing components
 import Nav from './components/Nav'
 import { TrackCard } from './components/TrackCard'
-import YouTubePlayer from './components/YouTubePlayer'
+// import YouTubePlayer from './components/YouTubePlayer' - using new PlayerProvider system
 import { PageFade } from './components/PageFade'
 import { Toast } from './components/Toast'
 import { PromptPill, PromptPillKeyboardHandler } from './components/PromptPill'
 import { PromptDrawer } from './components/PromptDrawer'
 import { usePrompts } from './hooks/usePrompts'
-import { usePlayerStore } from './store/playerStore'
+// import { usePlayerStore } from './store/playerStore'
 import { listParent } from './lib/variants'
 import { dur, ease } from './lib/motion'
 
@@ -131,7 +132,7 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
   const isMobile = useIsMobile()
 
   // Initialize YouTube player store
-  const playerStore = usePlayerStore()
+  // const playerStore = usePlayerStore()
 
   // Initialize prompts system
   const prompts = usePrompts({
@@ -178,21 +179,13 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
     setSessionDuration(mood.default_session_duration)
     setTimeRemaining(mood.default_session_duration * 60)
 
-    // Dispatch event to sync pomodoro timer with mood duration
-    window.dispatchEvent(new CustomEvent("mood:selected", {
-      detail: {
-        mood: mood.name,
-        duration: mood.default_session_duration
-      }
-    }));
-
-    // Load YouTube playlist for selected mood
-    try {
-      await playerStore.loadMood(mood.name)
-    } catch (error) {
-      showNotification('Failed to load music playlist')
-    }
-  }, [playerStore, showNotification])
+    // Load YouTube playlist for selected mood - handled by new MoodPicker system
+    // try {
+    //   await playerStore.loadMood(mood.name)
+    // } catch (error) {
+    //   showNotification('Failed to load music playlist')
+    // }
+  }, [showNotification])
 
   const handleStartSession = useCallback(async () => {
     if (!selectedMood) return
@@ -203,22 +196,18 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
       setTimeRemaining(sessionDuration * 60)
     }
     
-    // Update current track info from YouTube player
-    const currentYTTrack = playerStore.current
-    setCurrentTrack(currentYTTrack ? {
-      title: currentYTTrack.title,
-      artist: currentYTTrack.channel,
-      duration: 'YouTube'
-    } : {
+    // Update current track info from YouTube player - handled by new system
+    // const currentYTTrack = playerStore.current
+    setCurrentTrack({
       title: `${selectedMood.name} Focus Music`,
       artist: 'TuneIn Curated',
-      duration: '1:23:45'
+      duration: 'YouTube'
     })
 
-    // Start YouTube playback
-    playerStore.start()
+    // Start YouTube playback - handled by PlayerBar
+    // playerStore.start()
     showNotification(`${selectedMood.name} session started`)
-  }, [selectedMood, timeRemaining, sessionDuration, playerStore, showNotification])
+  }, [selectedMood, timeRemaining, sessionDuration, showNotification])
 
   // Listen for mood selection events from MoodPicker
   useEffect(() => {
@@ -241,7 +230,7 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
 
     const handleSessionStop = () => {
       // Stop any active session and reset states
-      playerStore.stop()
+      // playerStore.stop() - handled by PlayerBar
       setIsSessionActive(false)
       setIsPlaying(false)
       setCurrentTrack(null)
@@ -258,7 +247,7 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
       window.removeEventListener('session:start', handleSessionStart)
       window.removeEventListener('session:stop', handleSessionStop)
     }
-  }, [handleMoodSelect, selectedMood, isSessionActive, handleStartSession, playerStore, showNotification])
+  }, [handleMoodSelect, selectedMood, isSessionActive, handleStartSession, showNotification])
 
   const handleHomeClick = () => {
     if (isSessionActive) {
@@ -273,17 +262,18 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
   }
 
   const handleTogglePlay = () => {
-    if (isPlaying) {
-      playerStore.pause()
-    } else {
-      playerStore.resume()
-    }
+    // Handled by PlayerBar now
+    // if (isPlaying) {
+    //   playerStore.pause()
+    // } else {
+    //   playerStore.resume()
+    // }
     setIsPlaying(!isPlaying)
     showNotification(isPlaying ? 'Paused' : 'Playing')
   }
 
   const handleStopSession = () => {
-    playerStore.stop()
+    // playerStore.stop() - handled by PlayerBar
     setIsSessionActive(false)
     setIsPlaying(false)
     setTimeRemaining(sessionDuration * 60)
@@ -395,17 +385,15 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Volume2 size={16} className="text-app-muted" />
-                      <Progress 
-                        value={playerStore.volume} 
-                        className="flex-1 cursor-pointer" 
+                      <Progress
+                        value={70}
+                        className="flex-1 cursor-pointer"
                         onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect()
-                          const x = e.clientX - rect.left
-                          const percentage = (x / rect.width) * 100
-                          playerStore.setVolumeLevel(Math.max(0, Math.min(100, percentage)))
+                          // Volume control handled by PlayerBar
+                          console.log('Volume control moved to PlayerBar')
                         }}
                       />
-                      <span className="text-xs text-app-muted min-w-[3ch]">{Math.round(playerStore.volume)}</span>
+                      <span className="text-xs text-app-muted min-w-[3ch]">70</span>
                     </div>
                   </div>
                 </div>
@@ -496,6 +484,10 @@ function App() {
   const isMobile = useIsMobile();
   const [uiState, updateUIState] = useUIState();
 
+  useEffect(() => {
+    yt.mount('yt-root-iframe'); // don't await; controller will set ready
+  }, []);
+
   const handleShowToast = (message) => {
     setToastMessage(message);
     setShowToast(true);
@@ -561,6 +553,9 @@ function App() {
         <GlobalAudioProvider>
           <PlayerProvider>
             <div className="min-h-screen bg-app text-app-text">
+            {/* Keep the YT mount node parked offscreen, never duplicate this ID */}
+            <div id="yt-root-iframe" style={{position:'absolute', left:-99999, top:-99999, width:1, height:1}} />
+
             <Routes>
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route
@@ -583,7 +578,7 @@ function App() {
                     </Routes>
                     <Toast show={showToast} text={toastMessage} />
 
-                    {/* YouTube Player Bar */}
+                    {/* YouTube Player Bar - Keep for existing functionality */}
                     <PlayerBar />
 
                     {/* Mobile Command Bar */}

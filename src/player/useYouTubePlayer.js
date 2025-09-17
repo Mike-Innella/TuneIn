@@ -1,221 +1,188 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+function loadIframeAPI() {
+  return new Promise((resolve) => {
+    if (window.YT && window.YT.Player) return resolve();
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    window.onYouTubeIframeAPIReady = () => resolve();
+    document.head.appendChild(tag);
+  });
+}
+
 export default function useYouTubePlayer() {
-  const playerRef = useRef(null);
-  const elRef = useRef(null);
-  const [ready, setReady] = useState(false);
-  const [apiReady, setApiReady] = useState(false);
-  const [queue, setQueue] = useState([]);
-  const [index, setIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(60); // 0..100
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [pollId, setPollId] = useState(null);
-  const [ytMuted, setYtMuted] = useState(false);
+  const elRef = useRef(null);         // host div (hidden)
+  const playerRef = useRef(null);     // YT.Player instance
+  const pollRef = useRef(null);
   const lastVolRef = useRef(60);
 
-  // Load YT script once and detect when API is ready
+  const [apiReady, setApiReady] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [queue, setQueue] = useState([]);     // [{id,title,artist,artwork}]
+  const [index, setIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(60);   // 0..100 for YT
+  const [ytMuted, setYtMuted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  // init API
   useEffect(() => {
-    // @ts-ignore
-    if (window.YT && window.YT.Player) {
-      setApiReady(true);
-      return;
-    }
-    
-    const s = document.createElement('script');
-    s.src = 'https://www.youtube.com/iframe_api';
-    document.body.appendChild(s);
-    
-    // @ts-ignore
-    window.onYouTubeIframeAPIReady = () => {
-      setApiReady(true);
-    };
+    let mounted = true;
+    loadIframeAPI().then(() => mounted && setApiReady(true));
+    return () => { mounted = false; };
   }, []);
 
-  const onReady = useCallback(() => {
-    setReady(true);
-    // apply initial volume
-    try { playerRef.current?.setVolume?.(volume); } catch {}
-    // progress polling
-    const id = setInterval(() => {
-      const p = playerRef.current;
-      if (!p) return;
-      try {
-        const t = p.getCurrentTime?.() ?? 0;
-        const d = p.getDuration?.() ?? 0;
-        setCurrentTime(Number(t) || 0);
-        setDuration(Number(d) || 0);
-      } catch {}
-    }, 250);
-    setPollId(id);
-  }, [volume]);
-
-  const onStateChange = useCallback((ev) => {
-    const s = ev?.data;
-    // 1 = playing, 2 = paused, 0 = ended
-    if (s === 1) setIsPlaying(true);
-    else if (s === 2) setIsPlaying(false);
-    else if (s === 0) {
-      setIsPlaying(false);
-      next();
-    }
-  }, []);
-
+  // create player
   useEffect(() => {
-    // Create YT iframe player when element mounts AND API is ready
-    if (!elRef.current || playerRef.current || !apiReady) return;
-    
-    try {
-      // @ts-ignore
-      playerRef.current = new window.YT.Player(elRef.current, {
-        height: '0',
-        width: '0',
-        playerVars: { modestbranding: 1, rel: 0, playsinline: 1 },
-        events: { onReady: onReady, onStateChange }
-      });
-    } catch (error) {
-      console.warn('[YT] Failed to create player:', error);
-    }
-    
+    if (!apiReady || !elRef.current || playerRef.current) return;
+
+    playerRef.current = new window.YT.Player(elRef.current, {
+      height: '0',
+      width: '0',
+      playerVars: {
+        autoplay: 0, // NEVER autoplay; require gesture
+        controls: 0,
+        rel: 0,
+        fs: 0,
+        iv_load_policy: 3,
+        playsinline: 1,
+        origin: window.location.origin,
+      },
+      events: {
+        onReady: () => setReady(true),
+        onStateChange: (e) => {
+          // 1=playing, 2=paused, 0=ended
+          if (e.data === window.YT.PlayerState.PLAYING) setIsPlaying(true);
+          if (e.data === window.YT.PlayerState.PAUSED) setIsPlaying(false);
+          if (e.data === window.YT.PlayerState.ENDED) {
+            setIsPlaying(false);
+            next();
+          }
+        }
+      }
+    });
+
     return () => {
-      if (pollId) clearInterval(pollId);
-      try { playerRef.current?.destroy?.(); } catch {}
+      clearInterval(pollRef.current);
+      try { playerRef.current?.destroy(); } catch {}
       playerRef.current = null;
     };
-  }, [onReady, onStateChange, pollId, apiReady]); // Use apiReady instead of ready
+  }, [apiReady]);
 
-  const load = useCallback((items, startIndex = 0) => {
-    setQueue(Array.isArray(items) ? items : []);
-    setIndex(Math.max(0, startIndex));
-    setIsPlaying(false); // queue only; no autoplay
+  // progress polling
+  useEffect(() => {
+    clearInterval(pollRef.current);
+    if (!ready || !playerRef.current) return;
+
+    pollRef.current = setInterval(() => {
+      const p = playerRef.current;
+      const d = p.getDuration?.() || 0;
+      const t = p.getCurrentTime?.() || 0;
+      if (Number.isFinite(d)) setDuration(d);
+      if (Number.isFinite(t)) setCurrentTime(t);
+    }, 250);
+
+    return () => clearInterval(pollRef.current);
+  }, [ready]);
+
+  const load = useCallback((list, startAt = 0) => {
+    setQueue(Array.isArray(list) ? list : []);
+    setIndex(startAt || 0);
+    setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
   }, []);
 
-  const ensureLoaded = useCallback(() => {
+  // internal: actually cue current index
+  const cueCurrent = useCallback(() => {
     const p = playerRef.current;
-    const track = queue[index];
-    if (!p || !track) return;
-    const id = track.id || track.videoId || track.youtubeId;
-    if (!id) return;
-    // If not currently cued/loaded for this id, (re)load
-    try { p.loadVideoById({ videoId: id, startSeconds: 0 }); } catch {}
-  }, [queue, index]);
+    const cur = queue[index];
+    if (!p || !cur) return;
+    // cue video; do NOT play (gesture needed)
+    p.cueVideoById(cur.id);
+    // set initial volume/mute
+    p.setVolume(volume);
+    ytMuted ? p.mute() : p.unMute();
+  }, [queue, index, volume, ytMuted]);
+
+  useEffect(() => {
+    if (ready) cueCurrent();
+  }, [ready, queue, index, cueCurrent]);
 
   const play = useCallback(() => {
-    // User gesture handler should call this
-    console.log('[YT] Play called');
     const p = playerRef.current;
-    const track = queue[index];
-    
-    if (!p || !track) {
-      console.warn('[YT] No player or track available');
-      return;
+    if (!p || !queue[index]) return;
+    // Must be called from a user gesture; browsers will otherwise block
+    const st = p.getPlayerState?.();
+    if (st === window.YT.PlayerState.UNSTARTED || st === window.YT.PlayerState.CUED) {
+      p.playVideo(); // allowed after gesture
+    } else {
+      p.playVideo();
     }
-    
-    const id = track.id || track.videoId || track.youtubeId;
-    if (!id) {
-      console.warn('[YT] No video ID found in track:', track);
-      return;
-    }
-    
-    console.log('[YT] Loading and playing video:', id);
-    
-    try {
-      // Load the video and play immediately
-      p.loadVideoById({
-        videoId: id,
-        startSeconds: 0
-      });
-      
-      // The video should auto-play after loading due to user gesture
-      // But we can also explicitly call playVideo() after a brief delay
-      setTimeout(() => {
-        try {
-          p.playVideo();
-        } catch (err) {
-          console.warn('[YT] Failed to play after load:', err);
-        }
-      }, 100);
-      
-    } catch (error) {
-      console.error('[YT] Failed to load/play video:', error);
-    }
-  }, [queue, index]);
+  }, [index, queue]);
 
   const pause = useCallback(() => {
-    console.log('[YT] Pause called');
-    try { playerRef.current?.pauseVideo?.(); } catch {}
+    playerRef.current?.pauseVideo();
   }, []);
 
   const seek = useCallback((seconds) => {
-    const s = Math.max(0, Number(seconds) || 0);
-    console.log(`[YT] Seek to ${s}s`);
-    try { playerRef.current?.seekTo?.(s, true); } catch {}
-    setCurrentTime(s);
+    const p = playerRef.current;
+    if (!p) return;
+    const d = p.getDuration?.() || 0;
+    const clamped = Math.max(0, Math.min(seconds, d || seconds));
+    p.seekTo(clamped, true);
+    setCurrentTime(clamped);
   }, []);
 
+  const next = useCallback(() => {
+    setIndex(i => {
+      const ni = i + 1;
+      return ni < queue.length ? ni : 0;
+    });
+  }, [queue.length]);
+
+  const prev = useCallback(() => {
+    setIndex(i => (i > 0 ? i - 1 : Math.max(queue.length - 1, 0)));
+  }, [queue.length]);
+
   const setVol = useCallback((v) => {
-    const vv = Math.max(0, Math.min(100, Math.floor(v)));
-    console.log(`[YT] Volume set to ${vv}`);
+    const p = playerRef.current;
+    const vv = Math.max(0, Math.min(100, Math.round(v)));
     setVolume(vv);
-    try { playerRef.current?.setVolume?.(vv); } catch {}
+    lastVolRef.current = vv || lastVolRef.current;
+    if (p) p.setVolume(vv);
   }, []);
 
   const mute = useCallback((m) => {
+    const p = playerRef.current;
     setYtMuted(!!m);
-    if (m) {
-      lastVolRef.current = volume || 60;
-      setVol(0);
-    } else {
-      setVol(lastVolRef.current || 60);
-    }
-  }, [setVol, volume]);
+    if (!p) return;
+    if (m) p.mute();
+    else p.unMute();
+  }, []);
 
-  const next = useCallback(() => {
-    setIndex((i) => {
-      const ni = i + 1;
-      if (ni < queue.length) {
-        setIsPlaying(false);
-        setCurrentTime(0);
-        setDuration(0);
-        try {
-          const id = queue[ni]?.id || queue[ni]?.videoId || queue[ni]?.youtubeId;
-          if (id) playerRef.current?.loadVideoById?.({ videoId: id, startSeconds: 0 });
-        } catch {}
-        return ni;
-      }
-      return i; // no-op at end
-    });
-  }, [queue]);
-
-  const prev = useCallback(() => {
-    setIndex((i) => {
-      const ni = Math.max(0, i - 1);
-      if (ni !== i) {
-        setIsPlaying(false);
-        setCurrentTime(0);
-        setDuration(0);
-        try {
-          const id = queue[ni]?.id || queue[ni]?.videoId || queue[ni]?.youtubeId;
-          if (id) playerRef.current?.loadVideoById?.({ videoId: id, startSeconds: 0 });
-        } catch {}
-      }
-      return ni;
-    });
-  }, [queue]);
-
-  const current = queue[index];
+  // Listen for external pause events (when switching to HTML audio)
+  useEffect(() => {
+    const handler = () => playerRef.current?.pauseVideo();
+    window.addEventListener('yt:pause', handler);
+    return () => window.removeEventListener('yt:pause', handler);
+  }, []);
 
   return {
+    // host for the player
     elRef,
+    // state
     ready,
-    queue, index, current,
+    apiReady,
+    queue,
+    index,
     isPlaying,
     volume,
     currentTime,
     duration,
+    ytMuted,
+    // controls
     load,
     play,
     pause,
@@ -224,6 +191,5 @@ export default function useYouTubePlayer() {
     seek,
     setVol,
     mute,
-    ytMuted
   };
 }

@@ -201,3 +201,31 @@ header img[alt="TuneIn logo"] {
   object-fit: contain;
   line-height: 1;
 }
+
+/* Player bar layout and spacing */
+:root {
+  --player-height: 64px;
+}
+
+/* Ensure main content doesn't overlap player bar */
+main {
+  padding-bottom: var(--player-height);
+}
+
+/* Player bar specific styles */
+.player-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  height: var(--player-height);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure mobile safe area is respected */
+@media (max-width: 768px) {
+  main {
+    padding-bottom: calc(var(--player-height) + env(safe-area-inset-bottom));
+  }
+}

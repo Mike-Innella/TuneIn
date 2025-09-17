@@ -5,116 +5,134 @@ export const GlobalAudioContext = createContext(null);
 export function GlobalAudioProvider({ children }) {
   const audioRef = useRef(null);
   const [state, setState] = useState({
-    sourceType: 'html',
+    sourceType: 'html',       // 'html' | 'youtube'
     src: '',
     title: '',
     artist: '',
     artwork: '',
     playing: false,
     muted: false,
-    volume: 0.8, // 0..1
+    volume: 0.8,              // 0..1 for HTML5
     currentTime: 0,
-    duration: 0,
-    canPlay: false
+    duration: 0
   });
 
+  // Create audio element once
   useEffect(() => {
-    const a = new Audio();
-    a.preload = 'metadata';
-    a.crossOrigin = 'anonymous';
-
-    const onLoaded = () => setState(s => ({ ...s, duration: a.duration || 0, canPlay: true }));
-    const onTime = () => setState(s => ({ ...s, currentTime: a.currentTime || 0 }));
-    const onEnded = () => setState(s => ({ ...s, playing: false }));
-    const onPlay = () => setState(s => ({ ...s, playing: true }));
-    const onPause = () => setState(s => ({ ...s, playing: false }));
-
-    a.addEventListener('loadedmetadata', onLoaded);
-    a.addEventListener('timeupdate', onTime);
-    a.addEventListener('ended', onEnded);
-    a.addEventListener('play', onPlay);
-    a.addEventListener('pause', onPause);
-
-    audioRef.current = a;
+    if (!audioRef.current) {
+      const el = document.createElement('audio');
+      el.preload = 'auto';
+      el.crossOrigin = 'anonymous'; // safe default
+      el.addEventListener('timeupdate', () =>
+        setState(s => ({ ...s, currentTime: el.currentTime || 0 }))
+      );
+      el.addEventListener('durationchange', () =>
+        setState(s => ({ ...s, duration: isFinite(el.duration) ? el.duration : 0 }))
+      );
+      el.addEventListener('ended', () =>
+        setState(s => ({ ...s, playing: false }))
+      );
+      el.addEventListener('pause', () =>
+        setState(s => ({ ...s, playing: false }))
+      );
+      el.addEventListener('play', () =>
+        setState(s => ({ ...s, playing: true }))
+      );
+      audioRef.current = el;
+      document.body.appendChild(el); // keep off-DOM UI
+    }
     return () => {
-      a.pause();
-      a.removeEventListener('loadedmetadata', onLoaded);
-      a.removeEventListener('timeupdate', onTime);
-      a.removeEventListener('ended', onEnded);
-      a.removeEventListener('play', onPlay);
-      a.removeEventListener('pause', onPause);
-      audioRef.current = null;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current.remove();
+        audioRef.current = null;
+      }
     };
   }, []);
 
-  useEffect(() => {
-    if (!audioRef.current) return;
-    audioRef.current.muted = state.muted;
-    audioRef.current.volume = state.volume;
-  }, [state.muted, state.volume]);
+  const load = useCallback((src, meta = {}) => {
+    const el = audioRef.current;
+    if (!el) return;
 
-  const load = useCallback(({ src, title, artist, artwork, sourceType = 'html' }) => {
-    const a = audioRef.current;
-    if (!a) return;
+    // Pause YouTube when loading HTML audio
+    window.dispatchEvent(new CustomEvent('yt:pause'));
+
+    el.src = src || '';
+    el.load();
     setState(s => ({
       ...s,
-      sourceType,
-      src: src || '',
-      title: title || '',
-      artist: artist || '',
-      artwork: artwork || '',
-      playing: false,
-      canPlay: false,
+      sourceType: 'html',
+      src,
+      title: meta.title || '',
+      artist: meta.artist || '',
+      artwork: meta.artwork || '',
       currentTime: 0,
-      duration: 0
+      duration: 0,
+      playing: false
     }));
-    a.src = src || '';
-    a.load(); // do not autoplay here
   }, []);
 
   const play = useCallback(async () => {
-    const a = audioRef.current;
-    if (!a) return;
-    console.log('[HTML5] Play called');
-    try {
-      await a.play(); // must be from user gesture
-    } catch (err) {
-      console.warn('HTML5 play() blocked:', err?.message);
-    }
+    const el = audioRef.current;
+    if (!el) return;
+    // Must be called from a user gesture to satisfy autoplay rules
+    await el.play().catch(() => {}); // swallow DOMException if blocked
   }, []);
 
   const pause = useCallback(() => {
-    console.log('[HTML5] Pause called');
     audioRef.current?.pause();
   }, []);
 
   const seek = useCallback((seconds) => {
-    const a = audioRef.current;
-    if (!a) return;
-    const s = Math.max(0, Number(seconds) || 0);
-    console.log(`[HTML5] Seek to ${s}s`);
-    a.currentTime = Math.min(s, Number.isFinite(a.duration) ? a.duration : s);
+    const el = audioRef.current;
+    if (!el) return;
+    el.currentTime = Math.max(0, Math.min(seconds, el.duration || seconds));
+    setState(s => ({ ...s, currentTime: el.currentTime }));
   }, []);
 
-  const setVolume = useCallback((v) => {
-    const vv = Math.max(0, Math.min(1, Number(v)));
-    console.log(`[HTML5] Volume set to ${vv}`);
-    setState(s => ({ ...s, volume: vv }));
+  const setVolume = useCallback((vol01) => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.volume = Math.max(0, Math.min(1, vol01));
+    setState(s => ({ ...s, volume: el.volume, muted: el.muted }));
   }, []);
 
   const setMuted = useCallback((m) => {
-    setState(s => ({ ...s, muted: !!m }));
+    const el = audioRef.current;
+    if (!el) return;
+    el.muted = !!m;
+    setState(s => ({ ...s, muted: el.muted }));
   }, []);
 
+  const setSourceType = useCallback((sourceType) => {
+    setState(s => ({ ...s, sourceType }));
+  }, []);
+
+  // Enforce single active source - pause HTML when switching to YouTube
+  useEffect(() => {
+    if (state.sourceType === 'youtube') {
+      audioRef.current?.pause();
+    }
+  }, [state.sourceType]);
+
+  // Listen for source type changes from external events
+  useEffect(() => {
+    function onSetSource(e) {
+      const srcType = e.detail; // 'youtube' | 'html'
+      setSourceType(srcType);
+      if (srcType === 'youtube') {
+        // Pause HTML audio when switching to YouTube
+        audioRef.current?.pause();
+      }
+    }
+    window.addEventListener('audio:set_source', onSetSource);
+    return () => window.removeEventListener('audio:set_source', onSetSource);
+  }, [setSourceType]);
+
   const value = useMemo(() => ({
-    state,
-    load,
-    play,
-    pause,
-    seek,
-    setVolume,
-    setMuted
-  }), [state, load, play, pause, seek, setVolume, setMuted]);
+    state, load, play, pause, seek, setVolume, setMuted, setSourceType
+  }), [state, load, play, pause, seek, setVolume, setMuted, setSourceType]);
 
   return (
     <GlobalAudioContext.Provider value={value}>
