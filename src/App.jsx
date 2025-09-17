@@ -45,6 +45,7 @@ import { dur, ease } from './lib/motion'
 
 // New Pomodoro components
 import { Header } from './components/ui/Header'
+import { Footer } from './components/ui/Footer'
 import { PomodoroPanel } from './components/ui/PomodoroTimer'
 import Account from './pages/Account'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -118,7 +119,6 @@ const MOODS = [
 ]
 
 function HomePage({ showToast, onToggleTheme, onShowHelp }) {
-  const [selectedMood, setSelectedMood] = useState(null)
   const [isSessionActive, setIsSessionActive] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(0)
@@ -127,6 +127,7 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
   const [activeTab, setActiveTab] = useState('Focus')
   const [showToastLocal, setShowToastLocal] = useState(false)
   const [toastMessageLocal, setToastMessageLocal] = useState('')
+  const [selectedMood, setSelectedMood] = useState(null) // Keep for session management
   const isMobile = useIsMobile()
 
   // Initialize YouTube player store
@@ -193,35 +194,7 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
     }
   }, [playerStore, showNotification])
 
-  // Listen for mood selection events from MoodPicker
-  useEffect(() => {
-    const handleMoodSelected = (event) => {
-      const { mood, duration } = event.detail
-
-      // Find the corresponding mood object from MOODS array
-      const moodObj = MOODS.find(m => m.name === mood)
-      if (moodObj) {
-        handleMoodSelect(moodObj)
-      }
-    }
-
-    window.addEventListener('mood:selected', handleMoodSelected)
-    return () => window.removeEventListener('mood:selected', handleMoodSelected)
-  }, [handleMoodSelect])
-
-  const handleHomeClick = () => {
-    if (isSessionActive) {
-      setIsSessionActive(false)
-      setIsPlaying(false)
-      setCurrentTrack(null)
-      showNotification('Session ended - returned to home')
-    }
-    setSelectedMood(null)
-    setTimeRemaining(0)
-    setActiveTab('Focus')
-  }
-
-  const handleStartSession = async () => {
+  const handleStartSession = useCallback(async () => {
     if (!selectedMood) return
     
     setIsSessionActive(true)
@@ -245,6 +218,58 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
     // Start YouTube playback
     playerStore.start()
     showNotification(`${selectedMood.name} session started`)
+  }, [selectedMood, timeRemaining, sessionDuration, playerStore, showNotification])
+
+  // Listen for mood selection events from MoodPicker
+  useEffect(() => {
+    const handleMoodSelected = (event) => {
+      const { mood, duration } = event.detail
+
+      // Find the corresponding mood object from MOODS array
+      const moodObj = MOODS.find(m => m.name === mood)
+      if (moodObj) {
+        handleMoodSelect(moodObj)
+      }
+    }
+
+    const handleSessionStart = () => {
+      // Only start session if we have a selected mood and aren't already in a session
+      if (selectedMood && !isSessionActive) {
+        handleStartSession()
+      }
+    }
+
+    const handleSessionStop = () => {
+      // Stop any active session and reset states
+      playerStore.stop()
+      setIsSessionActive(false)
+      setIsPlaying(false)
+      setCurrentTrack(null)
+      setSelectedMood(null)
+      setTimeRemaining(0)
+      showNotification('Session ended')
+    }
+
+    window.addEventListener('mood:selected', handleMoodSelected)
+    window.addEventListener('session:start', handleSessionStart)
+    window.addEventListener('session:stop', handleSessionStop)
+    return () => {
+      window.removeEventListener('mood:selected', handleMoodSelected)
+      window.removeEventListener('session:start', handleSessionStart)
+      window.removeEventListener('session:stop', handleSessionStop)
+    }
+  }, [handleMoodSelect, selectedMood, isSessionActive, handleStartSession, playerStore, showNotification])
+
+  const handleHomeClick = () => {
+    if (isSessionActive) {
+      setIsSessionActive(false)
+      setIsPlaying(false)
+      setCurrentTrack(null)
+      showNotification('Session ended - returned to home')
+    }
+    setSelectedMood(null)
+    setTimeRemaining(0)
+    setActiveTab('Focus')
   }
 
   const handleTogglePlay = () => {
@@ -456,33 +481,6 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
 
           <MoodPicker />
 
-          {/* Start Session */}
-          <AnimatePresence>
-            {selectedMood && (
-              <motion.div 
-                className="text-center"
-                initial={{ y: 20, opacity: 0, scale: 0.95 }}
-                animate={{ y: 0, opacity: 1, scale: 1 }}
-                exit={{ y: -20, opacity: 0, scale: 0.95 }}
-                transition={{ duration: dur.m, ease: ease.out }}
-              >
-                <div className="max-w-md mx-auto rounded-2xl surface border border-app-border shadow-md p-8">
-                  <h3 className="text-xl font-semibold text-app-text mb-2">Ready to Focus?</h3>
-                  <p className="text-app-muted mb-6">
-                    Start a {sessionDuration}-minute {selectedMood.name.toLowerCase()} session
-                  </p>
-                  <motion.button
-                    onClick={handleStartSession}
-                    whileTap={{ scale: 0.95 }}
-                    className="w-full py-3 px-6 rounded-lg btn-primary flex items-center justify-center gap-2"
-                  >
-                    <Play size={20} />
-                    Start Focus Session
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </main>
       
@@ -601,6 +599,9 @@ function App() {
                         }}
                       />
                     )}
+
+                    {/* Footer */}
+                    <Footer />
                   </AuthGate>
                 }
               />

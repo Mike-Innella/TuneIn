@@ -23,9 +23,17 @@ export default function MoodPicker() {
       const data = await response.json();
 
       if (data.items && data.items.length > 0) {
-        load(data.items, 0);
-        // Also load first track into global audio player for preview
-        const firstTrack = data.items[0];
+        // Map API response to expected format (videoId -> id)
+        const mappedTracks = data.items.map(track => ({
+          ...track,
+          id: track.videoId || track.id // Ensure id property exists
+        }));
+        
+        // Load tracks into YouTube player (queue only, no autoplay)
+        load(mappedTracks, 0);
+        
+        // Load first track into global audio for UI display (no autoplay)
+        const firstTrack = mappedTracks[0];
         if (firstTrack) {
           await loadGlobalAudio({
             src: '', // YouTube URLs can't be played directly in audio tag
@@ -38,9 +46,17 @@ export default function MoodPicker() {
       } else {
         // Fallback to mock data for development
         const mockTracks = generateMockTracks(mood);
-        load(mockTracks, 0);
-        // Load first mock track
-        const firstTrack = mockTracks[0];
+        // Map mock data to expected format (videoId -> id)
+        const mappedMockTracks = mockTracks.map(track => ({
+          ...track,
+          id: track.videoId || track.id
+        }));
+        
+        // Load mock tracks into YouTube player (queue only, no autoplay)
+        load(mappedMockTracks, 0);
+        
+        // Load first mock track into global audio for UI display (no autoplay)
+        const firstTrack = mappedMockTracks[0];
         if (firstTrack) {
           await loadGlobalAudio({
             src: '', // YouTube URLs can't be played directly in audio tag

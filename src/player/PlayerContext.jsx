@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { useYouTubePlayer } from './useYouTubePlayer';
+import useYouTubePlayer from './useYouTubePlayer';
 
 const PlayerCtx = createContext(null);
 

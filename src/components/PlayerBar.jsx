@@ -1,24 +1,109 @@
 import { useState } from 'react'
 import { useGlobalAudio } from '../audio/GlobalAudioProvider'
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2 } from 'lucide-react'
+import { usePlayer } from '../player/PlayerContext'
+import { formatTime } from '../player/time'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, X } from 'lucide-react'
 import PlayerModal from './player/PlayerModal'
 
 export default function PlayerBar() {
-  const { state, play, pause, seek, setVolume, setMuted } = useGlobalAudio()
+  const { state, play: htmlPlay, pause: htmlPause, seek: htmlSeek, setVolume: htmlSetVolume, setMuted: htmlSetMuted, load } = useGlobalAudio()
+  const yt = usePlayer()
   const [modalOpen, setModalOpen] = useState(false)
-
-  const onPlayPause = () => (state.playing ? pause() : play())
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
+  
+  // Determine active backend
+  const usingYT = state.sourceType === 'youtube'
+  const isPlaying = usingYT ? yt.isPlaying : state.playing
+  
+  // Unified progress values
+  const maxDuration = usingYT ? (yt.duration || 0) : (state.duration || 0)
+  const currentTime = usingYT ? (yt.currentTime || 0) : (state.currentTime || 0)
+  
+  // Function to start a focus session when play is pressed
+  const startFocusSession = () => {
+    // Dispatch event to start focus session
+    window.dispatchEvent(new CustomEvent('session:start'))
   }
 
-  // Don't show if no track is loaded
+  // Function to close player and stop all audio
+  const onClose = () => {
+    // Stop both backends
+    yt.pause()
+    htmlPause()
+    
+    // Clear global audio state to hide PlayerBar
+    load({
+      src: '',
+      title: '',
+      artist: '',
+      artwork: '',
+      sourceType: 'html'
+    })
+    
+    // Dispatch event to stop any active session
+    window.dispatchEvent(new CustomEvent('session:stop'))
+  }
+
+  const onPlayPause = async () => {
+    // If we're starting playback, also start a focus session
+    const shouldStartSession = !isPlaying
+    
+    if (usingYT) {
+      // Handle YouTube playback
+      if (yt.isPlaying) {
+        yt.pause()
+      } else {
+        yt.play() // User gesture here
+        if (shouldStartSession) {
+          startFocusSession()
+        }
+      }
+    } else {
+      // Handle HTML audio playback
+      if (state.playing) {
+        htmlPause()
+      } else {
+        await htmlPlay() // User gesture here
+        if (shouldStartSession) {
+          startFocusSession()
+        }
+      }
+    }
+  }
+
+  const onSeek = (e) => {
+    const t = Number(e.target.value)
+    if (usingYT) {
+      yt.seek(t)
+    } else {
+      htmlSeek(t)
+    }
+  }
+
+  const onVolumeChange = (e) => {
+    const v = Number(e.target.value)
+    if (usingYT) {
+      yt.setVol(Math.round(v * 100)) // YT uses 0-100
+    } else {
+      htmlSetVolume(v) // HTML5 uses 0-1
+    }
+  }
+
+  const onMuteToggle = () => {
+    if (usingYT) {
+      yt.mute(!yt.ytMuted)
+    } else {
+      htmlSetMuted(!state.muted)
+    }
+  }
+
+  // Show player if any track is loaded (even if not playing)
   if (!state.src && !state.title) {
     return null
   }
+
+  // Get current volume for display
+  const currentVolume = usingYT ? (yt.ytMuted ? 0 : yt.volume / 100) : (state.muted ? 0 : state.volume)
+  const isMuted = usingYT ? yt.ytMuted : state.muted
 
   return (
     <>
@@ -47,6 +132,7 @@ export default function PlayerBar() {
           <div className="flex items-center gap-2">
             <button
               className="p-2 hover:bg-app-surface2 rounded-lg transition-colors"
+              onClick={() => usingYT ? yt.prev() : null}
               aria-label="Previous"
             >
               <SkipBack size={16} className="text-app-text" />
@@ -54,29 +140,37 @@ export default function PlayerBar() {
             <button
               className="p-2 hover:bg-app-surface2 rounded-lg transition-colors"
               onClick={onPlayPause}
-              disabled={!state.canPlay && state.sourceType !== 'youtube'}
-              aria-label={state.playing ? "Pause" : "Play"}
+              aria-label={isPlaying ? "Pause" : "Play"}
             >
-              {state.playing ? <Pause size={18} className="text-app-text" /> : <Play size={18} className="text-app-text" />}
+              {isPlaying ? <Pause size={18} className="text-app-text" /> : <Play size={18} className="text-app-text" />}
             </button>
             <button
               className="p-2 hover:bg-app-surface2 rounded-lg transition-colors"
+              onClick={() => usingYT ? yt.next() : null}
               aria-label="Next"
             >
               <SkipForward size={16} className="text-app-text" />
             </button>
           </div>
+          
+          {/* Close button */}
+          <button
+            className="p-2 hover:bg-app-surface2 rounded-lg transition-colors"
+            onClick={onClose}
+            aria-label="Close player"
+          >
+            <X size={16} className="text-app-text" />
+          </button>
         </div>
 
-        {/* Progress bar */}
+        {/* Progress bar - UNIFIED for both backends */}
         <input
           type="range"
           min={0}
-          max={state.duration || 0}
-          value={state.currentTime || 0}
-          onChange={(e) => seek(Number(e.target.value))}
+          max={Math.max(0, Math.floor(maxDuration))}
+          value={Math.floor(currentTime)}
+          onChange={onSeek}
           className="w-full mt-3 h-1 bg-app-surface2 rounded-lg appearance-none cursor-pointer accent-app-primary"
-          disabled={state.sourceType === 'youtube'}
         />
 
         {/* Bottom row - Volume + expand */}
@@ -84,34 +178,28 @@ export default function PlayerBar() {
           <div className="flex items-center gap-2">
             <button
               className="p-1 hover:bg-app-surface2 rounded transition-colors"
-              onClick={() => setMuted(!state.muted)}
-              aria-label={state.muted ? "Unmute" : "Mute"}
+              onClick={onMuteToggle}
+              aria-label={isMuted ? "Unmute" : "Mute"}
             >
-              {state.muted ? <VolumeX size={14} className="text-app-text" /> : <Volume2 size={14} className="text-app-text" />}
+              {isMuted ? <VolumeX size={14} className="text-app-text" /> : <Volume2 size={14} className="text-app-text" />}
             </button>
             <input
               type="range"
               min={0}
               max={1}
               step={0.01}
-              value={state.muted ? 0 : state.volume}
-              onChange={(e) => {
-                const newVolume = Number(e.target.value)
-                setVolume(newVolume)
-                if (newVolume > 0 && state.muted) {
-                  setMuted(false)
-                }
-              }}
+              value={currentVolume}
+              onChange={onVolumeChange}
               className="w-20 h-1 bg-app-surface2 rounded-lg appearance-none cursor-pointer accent-app-primary"
             />
             <span className="text-xs text-app-text-muted min-w-[3ch]">
-              {Math.round((state.muted ? 0 : state.volume) * 100)}
+              {Math.round(currentVolume * 100)}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-app-text-muted">
-              {formatTime(state.currentTime)} / {formatTime(state.duration)}
+              {formatTime(currentTime)} / {formatTime(maxDuration)}
             </span>
             <button
               className="px-3 py-1 bg-app-primary text-app-primary-fg hover:brightness-110 rounded-lg text-sm transition-all"

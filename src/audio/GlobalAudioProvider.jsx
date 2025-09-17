@@ -1,139 +1,132 @@
-import { createContext, useContext, useMemo, useRef, useState, useEffect, useCallback } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-const AudioCtx = createContext(null)
+export const GlobalAudioContext = createContext(null);
 
 export function GlobalAudioProvider({ children }) {
-  const audioRef = useRef(null)
+  const audioRef = useRef(null);
   const [state, setState] = useState({
+    sourceType: 'html',
     src: '',
     title: '',
     artist: '',
     artwork: '',
-    duration: 0,
-    currentTime: 0,
-    volume: 0.8,
-    muted: false,
     playing: false,
-    canPlay: false,
-    sourceType: 'html', // 'html' | 'youtube'
-  })
+    muted: false,
+    volume: 0.8, // 0..1
+    currentTime: 0,
+    duration: 0,
+    canPlay: false
+  });
 
-  // create singleton <audio> once
   useEffect(() => {
-    const el = document.createElement('audio')
-    el.preload = 'metadata'
-    el.crossOrigin = 'anonymous'
-    el.volume = state.volume
-    el.muted = state.muted
-    audioRef.current = el
+    const a = new Audio();
+    a.preload = 'metadata';
+    a.crossOrigin = 'anonymous';
 
-    const onLoaded = () => setState(s => ({ ...s, duration: el.duration || 0, canPlay: true }))
-    const onTime = () => setState(s => ({ ...s, currentTime: el.currentTime }))
-    const onEnd = () => setState(s => ({ ...s, playing: false }))
-    const onPlay = () => setState(s => ({ ...s, playing: true }))
-    const onPause = () => setState(s => ({ ...s, playing: false }))
+    const onLoaded = () => setState(s => ({ ...s, duration: a.duration || 0, canPlay: true }));
+    const onTime = () => setState(s => ({ ...s, currentTime: a.currentTime || 0 }));
+    const onEnded = () => setState(s => ({ ...s, playing: false }));
+    const onPlay = () => setState(s => ({ ...s, playing: true }));
+    const onPause = () => setState(s => ({ ...s, playing: false }));
 
-    el.addEventListener('loadedmetadata', onLoaded)
-    el.addEventListener('timeupdate', onTime)
-    el.addEventListener('ended', onEnd)
-    el.addEventListener('play', onPlay)
-    el.addEventListener('pause', onPause)
+    a.addEventListener('loadedmetadata', onLoaded);
+    a.addEventListener('timeupdate', onTime);
+    a.addEventListener('ended', onEnded);
+    a.addEventListener('play', onPlay);
+    a.addEventListener('pause', onPause);
 
+    audioRef.current = a;
     return () => {
-      el.pause()
-      el.src = ''
-      el.removeAttribute('src')
-      el.load()
-      el.removeEventListener('loadedmetadata', onLoaded)
-      el.removeEventListener('timeupdate', onTime)
-      el.removeEventListener('ended', onEnd)
-      el.removeEventListener('play', onPlay)
-      el.removeEventListener('pause', onPause)
-    }
-  }, [])
+      a.pause();
+      a.removeEventListener('loadedmetadata', onLoaded);
+      a.removeEventListener('timeupdate', onTime);
+      a.removeEventListener('ended', onEnded);
+      a.removeEventListener('play', onPlay);
+      a.removeEventListener('pause', onPause);
+      audioRef.current = null;
+    };
+  }, []);
 
-  const load = useCallback(async ({ src, title, artist, artwork, sourceType = 'html' }) => {
-    setState(s => ({ ...s, canPlay: false, playing: false }))
-    if (sourceType === 'youtube') {
-      // HTMLAudio cannot play YouTube URLs. Let UI show a message or switch to IFrame path.
-      setState(s => ({ ...s, src, title, artist, artwork, sourceType, canPlay: false, playing: false }))
-      return
-    }
-    const el = audioRef.current
-    if (el) {
-      el.src = src
-      try {
-        await new Promise((resolve, reject) => {
-          const onLoad = () => {
-            el.removeEventListener('loadedmetadata', onLoad)
-            el.removeEventListener('error', onError)
-            resolve()
-          }
-          const onError = (e) => {
-            el.removeEventListener('loadedmetadata', onLoad)
-            el.removeEventListener('error', onError)
-            reject(e)
-          }
-          el.addEventListener('loadedmetadata', onLoad)
-          el.addEventListener('error', onError)
-          el.load()
-        })
-      } catch (e) {
-        console.warn('Failed to load audio:', e)
-      }
-      setState(s => ({ ...s, src, title, artist, artwork, sourceType }))
-    }
-  }, [])
+  useEffect(() => {
+    if (!audioRef.current) return;
+    audioRef.current.muted = state.muted;
+    audioRef.current.volume = state.volume;
+  }, [state.muted, state.volume]);
+
+  const load = useCallback(({ src, title, artist, artwork, sourceType = 'html' }) => {
+    const a = audioRef.current;
+    if (!a) return;
+    setState(s => ({
+      ...s,
+      sourceType,
+      src: src || '',
+      title: title || '',
+      artist: artist || '',
+      artwork: artwork || '',
+      playing: false,
+      canPlay: false,
+      currentTime: 0,
+      duration: 0
+    }));
+    a.src = src || '';
+    a.load(); // do not autoplay here
+  }, []);
 
   const play = useCallback(async () => {
-    const el = audioRef.current
-    if (el) {
-      try {
-        await el.play() // must be called from a user gesture
-        setState(s => ({ ...s, playing: true }))
-      } catch (e) {
-        console.warn('play() blocked by policy or bad src', e)
-      }
+    const a = audioRef.current;
+    if (!a) return;
+    console.log('[HTML5] Play called');
+    try {
+      await a.play(); // must be from user gesture
+    } catch (err) {
+      console.warn('HTML5 play() blocked:', err?.message);
     }
-  }, [])
+  }, []);
 
   const pause = useCallback(() => {
-    const el = audioRef.current
-    if (el) {
-      el.pause()
-      setState(s => ({ ...s, playing: false }))
-    }
-  }, [])
+    console.log('[HTML5] Pause called');
+    audioRef.current?.pause();
+  }, []);
 
-  const seek = useCallback((t) => {
-    const el = audioRef.current
-    if (el) {
-      el.currentTime = Math.max(0, Math.min(t, el.duration || 0))
-    }
-  }, [])
+  const seek = useCallback((seconds) => {
+    const a = audioRef.current;
+    if (!a) return;
+    const s = Math.max(0, Number(seconds) || 0);
+    console.log(`[HTML5] Seek to ${s}s`);
+    a.currentTime = Math.min(s, Number.isFinite(a.duration) ? a.duration : s);
+  }, []);
 
   const setVolume = useCallback((v) => {
-    const el = audioRef.current
-    if (el) {
-      el.volume = v
-      setState(s => ({ ...s, volume: v }))
-    }
-  }, [])
+    const vv = Math.max(0, Math.min(1, Number(v)));
+    console.log(`[HTML5] Volume set to ${vv}`);
+    setState(s => ({ ...s, volume: vv }));
+  }, []);
 
   const setMuted = useCallback((m) => {
-    const el = audioRef.current
-    if (el) {
-      el.muted = m
-      setState(s => ({ ...s, muted: m }))
-    }
-  }, [])
+    setState(s => ({ ...s, muted: !!m }));
+  }, []);
 
   const value = useMemo(() => ({
-    audio: audioRef.current,
-    state, load, play, pause, seek, setVolume, setMuted
-  }), [state, load, play, pause, seek, setVolume, setMuted])
+    state,
+    load,
+    play,
+    pause,
+    seek,
+    setVolume,
+    setMuted
+  }), [state, load, play, pause, seek, setVolume, setMuted]);
 
-  return <AudioCtx.Provider value={value}>{children}</AudioCtx.Provider>
+  return (
+    <GlobalAudioContext.Provider value={value}>
+      {children}
+    </GlobalAudioContext.Provider>
+  );
 }
 
-export const useGlobalAudio = () => useContext(AudioCtx)
+export const useGlobalAudio = () => {
+  const context = useContext(GlobalAudioContext);
+  if (!context) {
+    throw new Error('useGlobalAudio must be used within GlobalAudioProvider');
+  }
+  return context;
+};
