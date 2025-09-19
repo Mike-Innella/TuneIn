@@ -29,7 +29,7 @@ import { GlobalAudioProvider } from './audio/GlobalAudioProvider'
 import PlayerBar from './components/PlayerBar'
 import MoodPicker from './components/MoodPicker'
 import MobileCommandBar from './components/MobileCommandBar'
-import * as yt from './player/ytController'
+import YouTubeMount from './player/YouTubeMount'
 
 // Existing components
 import Nav from './components/Nav'
@@ -484,9 +484,6 @@ function App() {
   const isMobile = useIsMobile();
   const [uiState, updateUIState] = useUIState();
 
-  useEffect(() => {
-    yt.mount('yt-root-iframe'); // don't await; controller will set ready
-  }, []);
 
   const handleShowToast = (message) => {
     setToastMessage(message);
@@ -553,8 +550,8 @@ function App() {
         <GlobalAudioProvider>
           <PlayerProvider>
             <div className="min-h-screen bg-app text-app-text">
-            {/* Keep the YT mount node parked offscreen, never duplicate this ID */}
-            <div id="yt-root-iframe" style={{position:'absolute', left:-99999, top:-99999, width:1, height:1}} />
+            {/* YouTube player mount */}
+            <YouTubeMount />
 
             <Routes>
               <Route path="/reset-password" element={<ResetPassword />} />

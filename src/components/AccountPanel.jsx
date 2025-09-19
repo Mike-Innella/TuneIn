@@ -15,14 +15,33 @@ export default function AccountPanel() {
   useEffect(() => {
     const load = async () => {
       if (!user) return;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .eq('id', user.id)
-        .single();
-      if (!error && data) {
-        setFullName(data.full_name ?? '');
-        setAvatarUrl(data.avatar_url ?? '');
+      try {
+        // Try the auth-schema.sql structure first (id column)
+        let { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        // If that fails, try the schema.sql structure (user_id column)
+        if (error && error.code === 'PGRST116') {
+          const result = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          data = result.data;
+          error = result.error;
+        }
+
+        if (!error && data) {
+          setFullName(data.full_name ?? '');
+          setAvatarUrl(data.avatar_url ?? '');
+        } else if (error) {
+          console.warn('Profile load failed:', error);
+        }
+      } catch (err) {
+        console.warn('Profile load error:', err);
       }
     };
     load();
@@ -33,13 +52,32 @@ export default function AccountPanel() {
 
   const saveProfile = async () => {
     setSaving(true);
-    const { error } = await supabase.from('profiles').update({
-      full_name: fullName || null,
-      avatar_url: avatarUrl || null,
-    }).eq('id', user.id);
+    try {
+      // Try updating with auth-schema.sql structure first (id column)
+      let { error } = await supabase.from('profiles').update({
+        full_name: fullName || null,
+        avatar_url: avatarUrl || null,
+      }).eq('id', user.id);
+
+      // If that fails, try schema.sql structure (user_id column)
+      if (error && error.code === 'PGRST116') {
+        const result = await supabase.from('profiles').update({
+          full_name: fullName || null,
+          avatar_url: avatarUrl || null,
+        }).eq('user_id', user.id);
+        error = result.error;
+      }
+
+      if (error) {
+        alert(error.message);
+      } else {
+        setShowProfile(false);
+      }
+    } catch (err) {
+      console.warn('Profile save error:', err);
+      alert('Failed to save profile');
+    }
     setSaving(false);
-    if (error) alert(error.message);
-    else setShowProfile(false);
   };
 
   const profileModal = showProfile ? createPortal(

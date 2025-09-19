@@ -28,11 +28,26 @@ export default function MoodPicker() {
       const firstId = data?.videoIds?.[0];
       if (!firstId) return;
 
-      // 3) Cue the first result (no autoplay)
-      if (yt.isReady()) yt.cue(firstId);
-
-      // 4) Set source type to YouTube
+      // 3) Switch to YouTube source
       window.dispatchEvent(new CustomEvent('audio:set_source', { detail: 'youtube' }));
+
+      // 4) Cue the first result (no autoplay - requires user gesture)
+      if (yt.isReady()) {
+        yt.cue(firstId);
+        console.log('[mood] cued video', firstId);
+      } else {
+        console.warn('[mood] YouTube player not ready, waiting...');
+        // Wait for YouTube player to be ready, then cue the video
+        const checkReady = setInterval(() => {
+          if (yt.isReady()) {
+            clearInterval(checkReady);
+            yt.cue(firstId);
+            console.log('[mood] cued video after wait', firstId);
+          }
+        }, 100);
+        // Give up after 5 seconds
+        setTimeout(() => clearInterval(checkReady), 5000);
+      }
 
       // Dispatch mood selection event for Pomodoro integration
       const duration = MOOD_DURATIONS[mood] || 25;

@@ -1,0 +1,113 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Load environment variables
+dotenv.config({ path: '.env.local' });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const app = express();
+const port = 3001;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// YouTube Search API endpoint
+app.get('/api/youtubeSearch', async (req, res) => {
+  try {
+    // Check if API key is available
+    if (!process.env.YT_API_KEY) {
+      return res.status(500).json({
+        error: 'API key not configured',
+        details: 'YouTube API key is missing from environment variables'
+      });
+    }
+
+    const { mood = '', q: directQuery, pageToken } = req.query;
+    const q = directQuery || (mood ? `${mood} lofi beats instrumental -lyrics` : 'lofi hip hop beats');
+
+    console.log('YouTube search request for:', q);
+
+    // For development, return mock data if API key is restricted
+    if (process.env.NODE_ENV !== 'production' && process.env.USE_MOCK_DATA === 'true') {
+      console.log('Returning mock YouTube data for development');
+      return res.json({
+        videoIds: ['dQw4w9WgXcQ', 'jNQXAC9IVRw', 'y6120QOlsfU'],
+        items: [
+          {
+            id: 'dQw4w9WgXcQ',
+            title: `${mood || 'Lofi'} Focus Music`,
+            artist: 'Sample Artist',
+            artwork: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg'
+          }
+        ],
+        nextPageToken: null
+      });
+    }
+
+    const params = new URLSearchParams({
+      part: 'snippet',
+      type: 'video',
+      maxResults: '25',
+      q,
+      key: process.env.YT_API_KEY,
+      videoEmbeddable: 'true',
+      videoSyndicated: 'true',
+      safeSearch: 'moderate'
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const url = `https://www.googleapis.com/youtube/v3/search?${params.toString()}`;
+
+    // For development - if API key has referrer restrictions, we might need to handle this differently
+    const headers = {
+      'User-Agent': 'TuneIn-Frontend/1.0'
+    };
+
+    // Try to set appropriate referrer for production vs development
+    if (process.env.NODE_ENV === 'production') {
+      headers['Referer'] = 'https://your-production-domain.com';
+    }
+
+    console.log('Making YouTube API request to:', url.replace(process.env.YT_API_KEY, 'HIDDEN'));
+    const r = await fetch(url, { headers });
+    if (!r.ok) {
+      const txt = await r.text();
+      console.error('YouTube API error:', r.status, txt);
+
+      // If it's a 403 error due to referrer restrictions, suggest using mock data
+      if (r.status === 403 && txt.includes('referer')) {
+        return res.status(500).json({
+          error: 'YouTube API referrer restriction',
+          details: 'API key has referrer restrictions. For development, you can:\n1. Add localhost:5173 to API key restrictions in Google Cloud Console\n2. Create an unrestricted API key for development\n3. Set USE_MOCK_DATA=true in .env.local to use mock data',
+          suggestion: 'Add USE_MOCK_DATA=true to your .env.local file to use mock data for development'
+        });
+      }
+
+      return res.status(r.status).json({ error: 'YouTube API error', details: txt });
+    }
+    const data = await r.json();
+
+    const items = (data.items || []).map(it => ({
+      id: it.id.videoId,
+      title: it.snippet.title,
+      artist: it.snippet.channelTitle,
+      artwork: it.snippet.thumbnails?.medium?.url || it.snippet.thumbnails?.default?.url
+    }));
+
+    const videoIds = items.map(item => item.id);
+    res.json({ videoIds, items, nextPageToken: data.nextPageToken || null });
+  } catch (e) {
+    console.error('Server error:', e);
+    res.status(500).json({ error: 'server_error', details: String(e) });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`API server running on port ${port}`);
+});

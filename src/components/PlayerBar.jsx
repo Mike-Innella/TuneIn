@@ -11,15 +11,13 @@ export default function PlayerBar() {
   const [modalOpen, setModalOpen] = useState(false)
   const [ytState, setYtState] = useState({ currentTime: 0, duration: 0, playing: false })
 
-  const init = yt.isReady()
-  const usingYT = init && state.sourceType === 'youtube'
+  const usingYT = yt.isReady() && state.sourceType === 'youtube'
 
   useEffect(() => {
-    if (!yt.isReady()) return
     const unsub = yt.subscribe?.((s) => {
       setYtState(s)
     })
-    return () => {}
+    return () => yt.subscribe?.(null) // clear subscription on unmount
   }, [])
 
   const isPlaying = usingYT ? ytState.playing : state.playing
@@ -41,7 +39,7 @@ export default function PlayerBar() {
     const shouldStartSession = !isPlaying
     if (usingYT) {
       if (ytState.playing) yt.pause()
-      else yt.play()
+      else yt.play() // must be called from user click handler for autoplay policy
     } else {
       if (state.playing) htmlPause()
       else await htmlPlay()
@@ -66,7 +64,7 @@ export default function PlayerBar() {
 
   // Show player if there's content to play - either HTML source or YouTube ready with content
   const hasContent = usingYT ? true : Boolean(state.src);
-  console.log('[playerbar] usingYT?', usingYT, 'src', state.src, 'hasContent', hasContent);
+  console.log('[playerbar] sourceType:', state.sourceType, 'usingYT:', usingYT, 'ytReady:', yt.isReady(), 'src:', state.src, 'hasContent:', hasContent);
 
   if (!hasContent) {
     return null;
