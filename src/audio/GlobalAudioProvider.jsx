@@ -84,6 +84,14 @@ export function GlobalAudioProvider({ children }) {
     audioRef.current?.pause();
   }, []);
 
+  const stop = useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.pause();
+    el.currentTime = 0;
+    setState(s => ({ ...s, playing: false, currentTime: 0 }));
+  }, []);
+
   const seek = useCallback((seconds) => {
     const el = audioRef.current;
     if (!el) return;
@@ -130,9 +138,21 @@ export function GlobalAudioProvider({ children }) {
     return () => window.removeEventListener('audio:set_source', onSetSource);
   }, [setSourceType]);
 
+  // Listen for audio control events (like stop)
+  useEffect(() => {
+    function onAudioControl(e) {
+      const { action } = e.detail;
+      if (action === 'stop') {
+        stop();
+      }
+    }
+    window.addEventListener('audio:control', onAudioControl);
+    return () => window.removeEventListener('audio:control', onAudioControl);
+  }, [stop]);
+
   const value = useMemo(() => ({
-    state, load, play, pause, seek, setVolume, setMuted, setSourceType
-  }), [state, load, play, pause, seek, setVolume, setMuted, setSourceType]);
+    state, load, play, pause, stop, seek, setVolume, setMuted, setSourceType
+  }), [state, load, play, pause, stop, seek, setVolume, setMuted, setSourceType]);
 
   return (
     <GlobalAudioContext.Provider value={value}>

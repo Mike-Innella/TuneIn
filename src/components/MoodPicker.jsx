@@ -3,6 +3,7 @@ import { MOOD_QUERIES } from '../config/moods';
 import { MOOD_DURATIONS } from '../lib/focusConfig';
 import { Loader2 } from 'lucide-react';
 import * as yt from '../player/ytController';
+import { log, warn, error } from '../lib/logger';
 
 export default function MoodPicker() {
   const [loading, setLoading] = useState(null);
@@ -10,7 +11,7 @@ export default function MoodPicker() {
   const handleMoodSelect = async (mood) => {
     setLoading(mood);
     try {
-      console.log('[mood] clicked', mood);
+      log('[mood] clicked', mood);
 
       // 1) Build query from mood mapping
       const q = MOOD_QUERIES[mood] || `${mood} music`;
@@ -19,7 +20,7 @@ export default function MoodPicker() {
       const response = await fetch(`/api/youtubeSearch?q=${encodeURIComponent(q)}`);
 
       if (!response.ok) {
-        console.error('youtubeSearch failed', response.status);
+        error('youtubeSearch failed', response.status);
         return;
       }
 
@@ -34,15 +35,15 @@ export default function MoodPicker() {
       // 4) Cue the first result (no autoplay - requires user gesture)
       if (yt.isReady()) {
         yt.cue(firstId);
-        console.log('[mood] cued video', firstId);
+        log('[mood] cued video', firstId);
       } else {
-        console.warn('[mood] YouTube player not ready, waiting...');
+        warn('[mood] YouTube player not ready, waiting...');
         // Wait for YouTube player to be ready, then cue the video
         const checkReady = setInterval(() => {
           if (yt.isReady()) {
             clearInterval(checkReady);
             yt.cue(firstId);
-            console.log('[mood] cued video after wait', firstId);
+            log('[mood] cued video after wait', firstId);
           }
         }, 100);
         // Give up after 5 seconds
@@ -56,7 +57,7 @@ export default function MoodPicker() {
       }));
 
     } catch (error) {
-      console.error('Failed to load mood:', error);
+      error('Failed to load mood:', error);
     } finally {
       setLoading(null);
     }

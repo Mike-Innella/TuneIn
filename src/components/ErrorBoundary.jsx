@@ -1,4 +1,5 @@
 import { Component } from "react";
+import { error } from '../lib/logger';
 
 export class ErrorBoundary extends Component {
   state = { hasError: false, error: null, errorInfo: null };
@@ -8,9 +9,9 @@ export class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught error:", error);
-    console.error("Error info:", errorInfo);
-    console.error("Component stack:", errorInfo.componentStack);
+    error("ErrorBoundary caught error:", error);
+    error("Error info:", errorInfo);
+    error("Component stack:", errorInfo.componentStack);
     this.setState({ error, errorInfo });
   }
 

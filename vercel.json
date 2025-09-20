@@ -5,7 +5,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://www.youtube.com https://www.gstatic.com 'unsafe-inline'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; img-src 'self' data: blob: https://i.ytimg.com https://*.ytimg.com; media-src 'self' blob: https://*.googlevideo.com https://*.youtube.com; connect-src 'self' https://www.youtube.com https://*.googlevideo.com https://i.ytimg.com;"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com; connect-src 'self' https://www.googleapis.com https://*.googlevideo.com https://www.youtube.com; img-src 'self' data: https://*.ytimg.com https://i.ytimg.com; media-src 'self' blob: https://*.googlevideo.com https://www.youtube.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com; style-src 'self' 'unsafe-inline';"
         }
       ]
     }

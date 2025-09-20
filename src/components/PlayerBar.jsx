@@ -5,13 +5,14 @@ import { formatTime } from '../player/time'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, X } from 'lucide-react'
 import PlayerModal from './player/PlayerModal'
 import * as yt from '../player/ytController'
+import { log } from '../lib/logger'
 
 export default function PlayerBar() {
   const { state, play: htmlPlay, pause: htmlPause, seek: htmlSeek, setVolume: htmlSetVolume, setMuted: htmlSetMuted } = useGlobalAudio()
   const [modalOpen, setModalOpen] = useState(false)
   const [ytState, setYtState] = useState({ currentTime: 0, duration: 0, playing: false })
 
-  const usingYT = yt.isReady() && state.sourceType === 'youtube'
+  const usingYT = (typeof window !== 'undefined') && yt.isReady() && state.sourceType === 'youtube'
 
   useEffect(() => {
     const unsub = yt.subscribe?.((s) => {
@@ -64,7 +65,7 @@ export default function PlayerBar() {
 
   // Show player if there's content to play - either HTML source or YouTube ready with content
   const hasContent = usingYT ? true : Boolean(state.src);
-  console.log('[playerbar] sourceType:', state.sourceType, 'usingYT:', usingYT, 'ytReady:', yt.isReady(), 'src:', state.src, 'hasContent:', hasContent);
+  log('[playerbar] sourceType:', state.sourceType, 'usingYT:', usingYT, 'ytReady:', yt.isReady(), 'src:', state.src, 'hasContent:', hasContent);
 
   if (!hasContent) {
     return null;

@@ -1,14 +1,45 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const q = String(req.query.q || '').trim();
-  if (!q) return res.status(400).json({ error: 'q required' });
+  try {
+    const { mood = '', q: directQuery, pageToken } = req.query as Record<string, string | undefined>;
+    const q = (directQuery || (mood ? `${mood} lofi beats instrumental -lyrics` : 'lofi hip hop beats')).trim();
 
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=10&q=${encodeURIComponent(q)}&key=${process.env.YT_API_KEY}`;
-  const r = await fetch(url);
-  if (!r.ok) return res.status(502).json({ error: 'youtube_failed', status: r.status });
+    if (!process.env.YT_API_KEY) {
+      return res.status(500).json({ error: 'server_error', details: 'Missing YT_API_KEY' });
+    }
 
-  const data = await r.json();
-  const videoIds = (data.items || []).map((it: any) => it?.id?.videoId).filter(Boolean);
-  return res.status(200).json({ videoIds });
+    const params = new URLSearchParams({
+      part: 'snippet',
+      type: 'video',
+      maxResults: '25',
+      q,
+      key: process.env.YT_API_KEY!,
+      videoEmbeddable: 'true',
+      videoSyndicated: 'true',
+      safeSearch: 'moderate',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const url = `https://www.googleapis.com/youtube/v3/search?${params.toString()}`;
+    const r = await fetch(url);
+
+    if (!r.ok) {
+      const txt = await r.text();
+      return res.status(r.status).json({ error: 'upstream_error', details: txt });
+    }
+
+    const data = await r.json();
+    const items = (data.items || []).map((it: any) => ({
+      id: it?.id?.videoId,
+      title: it?.snippet?.title,
+      artist: it?.snippet?.channelTitle,
+      artwork: it?.snippet?.thumbnails?.medium?.url || it?.snippet?.thumbnails?.default?.url,
+    })).filter((x: any) => x.id);
+
+    const videoIds = items.map((i: any) => i.id);
+    return res.status(200).json({ videoIds, items, nextPageToken: data.nextPageToken || null });
+  } catch (e: any) {
+    return res.status(500).json({ error: 'server_error', details: String(e?.message || e) });
+  }
 }

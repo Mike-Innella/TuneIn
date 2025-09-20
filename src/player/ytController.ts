@@ -1,6 +1,8 @@
 // src/player/ytController.ts
 // A small, robust singleton wrapper around the YouTube IFrame API.
 
+import { warn } from '../lib/logger';
+
 type SubFn = (s: { currentTime: number; duration: number; playing: boolean }) => void;
 
 let player: YT.Player | null = null;
@@ -25,33 +27,57 @@ function ensureApi(): Promise<void> {
 export async function mount(elId: string, initialVideoId?: string) {
   await ensureApi();
 
-  return new Promise<void>((resolve) => {
-    player = new YT.Player(elId, {
-      width: 0,
-      height: 0,
-      playerVars: {
-        playsinline: 1,
-        rel: 0,
-        modestbranding: 1,
-        // Do NOT set autoplay; we respect user gesture.
-        origin: window.location.origin,
-      },
-      events: {
-        onReady: () => {
-          ready = true;
-          // Initialize first duration if available
-          pushState();
-          resolve();
+  const host = document.getElementById(elId);
+  if (!host) {
+    throw new Error(`YouTube host element '${elId}' not found`);
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    try {
+      player = new YT.Player(elId, {
+        width: '1',
+        height: '1',
+        // Use a silent 1-second video for initialization if no initial video provided
+        videoId: initialVideoId || 'GJLlxj_dtq8',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          playsinline: 1,
+          enablejsapi: 1,
+          rel: 0,
+          origin: window.location.origin,
         },
-        onStateChange: () => {
-          pushState();
+        events: {
+          onReady: () => {
+            ready = true;
+            console.log('YouTube audio player ready');
+            // Mute initially to avoid any sound from initialization
+            if (player && !initialVideoId) {
+              try {
+                player.mute();
+              } catch (e) {
+                console.warn('Could not mute player on init:', e);
+              }
+            }
+            pushState();
+            resolve();
+          },
+          onStateChange: () => {
+            pushState();
+          },
+          onError: (e) => {
+            warn("YouTube player error:", e?.data);
+            // Don't reject on error - just log it
+          },
         },
-        onError: (e) => {
-          console.warn("YouTube error:", e?.data);
-        },
-      },
-      videoId: initialVideoId || undefined,
-    });
+      });
+    } catch (err) {
+      console.error('Failed to create YouTube player:', err);
+      reject(err);
+    }
   }).then(() => {
     if (pollId) window.clearInterval(pollId);
     pollId = window.setInterval(() => {
@@ -88,12 +114,24 @@ export function isInitialized() {
 
 export function cue(videoId: string) {
   if (!isReady()) return;
+  // Unmute for actual playback
+  try {
+    player!.unMute();
+  } catch (e) {
+    console.warn('Could not unmute player:', e);
+  }
   player!.cueVideoById(videoId);
 }
 
 export function load(videoId: string) {
   // For cases where you want to immediately load (still won't autoplay without user gesture)
   if (!isReady()) return;
+  // Unmute for actual playback
+  try {
+    player!.unMute();
+  } catch (e) {
+    console.warn('Could not unmute player:', e);
+  }
   player!.loadVideoById(videoId);
 }
 
@@ -105,6 +143,11 @@ export function play() {
 export function pause() {
   if (!isReady()) return;
   player!.pauseVideo();
+}
+
+export function stop() {
+  if (!isReady()) return;
+  player!.stopVideo();
 }
 
 export function seek(seconds: number) {

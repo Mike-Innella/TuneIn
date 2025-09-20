@@ -77,14 +77,14 @@ export function Footer() {
               >
                 Keyboard Shortcuts
               </button>
-              <a 
-                href="#" 
+              <a
+                href="/policy"
                 className="text-sm text-app-muted hover:text-app-text transition-colors duration-200"
               >
                 Privacy Policy
               </a>
-              <a 
-                href="#" 
+              <a
+                href="/terms"
                 className="text-sm text-app-muted hover:text-app-text transition-colors duration-200"
               >
                 Terms of Service
@@ -125,6 +125,7 @@ export function Footer() {
           </div>
         </div>
       </div>
+
     </footer>
   );
 }

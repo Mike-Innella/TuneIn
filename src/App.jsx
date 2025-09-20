@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge.jsx'
 import { Progress } from '@/components/ui/progress.jsx'
+import { log } from './lib/logger'
 import {
   Play,
   Pause,
@@ -25,8 +26,9 @@ import ResetPassword from './components/ResetPassword'
 
 // Audio System
 import { PlayerProvider } from './player/PlayerContext'
-import { GlobalAudioProvider } from './audio/GlobalAudioProvider'
+import { GlobalAudioProvider, useGlobalAudio } from './audio/GlobalAudioProvider'
 import PlayerBar from './components/PlayerBar'
+import * as yt from './player/ytController'
 import MoodPicker from './components/MoodPicker'
 import MobileCommandBar from './components/MobileCommandBar'
 import YouTubeMount from './player/YouTubeMount'
@@ -53,7 +55,6 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Mobile components
 import { MobileNav } from './components/MobileNav'
-import { PlayerSheet } from './components/PlayerSheet'
 import { MoodSheet } from './components/MoodSheet'
 import { MoreSheet } from './components/MoreSheet'
 import { useIsMobile } from './hooks/use-mobile'
@@ -273,7 +274,35 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
   }
 
   const handleStopSession = () => {
-    // playerStore.stop() - handled by PlayerBar
+    // Stop all audio playback
+    try {
+      // Stop YouTube player
+      yt.stop();
+
+      // Stop HTML5 audio by finding the global audio element
+      const audioEl = document.querySelector('audio');
+      if (audioEl) {
+        audioEl.pause();
+        audioEl.currentTime = 0;
+      }
+
+      // Reset source type to none via event
+      window.dispatchEvent(new CustomEvent('audio:set_source', {
+        detail: 'none'
+      }));
+
+      // Dispatch stop event for any listening components
+      window.dispatchEvent(new CustomEvent('audio:control', {
+        detail: { action: 'stop' }
+      }));
+
+      // Close any player UI
+      window.dispatchEvent(new Event('player:close'));
+    } catch (error) {
+      console.warn('Error stopping audio during session end:', error);
+    }
+
+    // Reset session state
     setIsSessionActive(false)
     setIsPlaying(false)
     setTimeRemaining(sessionDuration * 60)
@@ -371,33 +400,6 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1, transition: { duration: dur.m, delay: 0.2 } }}
             >
-              {/* Current Track */}
-              {currentTrack && (
-                <div className="rounded-2xl surface border border-app-border p-6">
-                  <h3 className="text-lg font-medium mb-4 text-app-text">Now Playing</h3>
-                  <div className="space-y-4">
-                    <div className="w-full h-24 bg-app-surface2/50 rounded-xl flex items-center justify-center">
-                      <div className="text-app-muted text-sm">Album Art</div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-app-text">{currentTrack.title}</h4>
-                      <p className="text-sm text-app-muted">{currentTrack.artist}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Volume2 size={16} className="text-app-muted" />
-                      <Progress
-                        value={70}
-                        className="flex-1 cursor-pointer"
-                        onClick={(e) => {
-                          // Volume control handled by PlayerBar
-                          console.log('Volume control moved to PlayerBar')
-                        }}
-                      />
-                      <span className="text-xs text-app-muted min-w-[3ch]">70</span>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Session Settings */}
               <div className="rounded-2xl surface border border-app-border p-6">
@@ -478,11 +480,19 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
 }
 
 function App() {
+  const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showHotkeys, setShowHotkeys] = useState(false);
   const isMobile = useIsMobile();
   const [uiState, updateUIState] = useUIState();
+
+  // Listen for custom navigation events fired by MobileCommandBar, etc.
+  useEffect(() => {
+    function toAccount() { navigate('/account'); }
+    window.addEventListener('navigate:account', toAccount);
+    return () => window.removeEventListener('navigate:account', toAccount);
+  }, [navigate]);
 
 
   const handleShowToast = (message) => {
