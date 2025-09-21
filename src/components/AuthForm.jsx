@@ -26,7 +26,13 @@ export default function AuthForm() {
         setMsg('Check your email for a password reset link.');
         setMode('login');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+          options: {
+            redirectTo: window.location.origin
+          }
+        });
         if (error) throw error;
       }
     } catch (e) {
