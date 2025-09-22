@@ -3,6 +3,9 @@ import express from "express";
 import fetch from "node-fetch";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+
+// Load environment variables from local .env file
 dotenv.config();
 
 const app = express();
@@ -11,6 +14,7 @@ app.use(express.json());
 
 // Expect env YT_API_KEY (server-side, NOT prefixed with VITE_)
 const YT_API_KEY = process.env.YT_API_KEY;
+console.log("[server] YT_API_KEY loaded:", YT_API_KEY ? `${YT_API_KEY.substring(0, 10)}...` : "MISSING");
 if (!YT_API_KEY) {
   console.warn("[server] Missing YT_API_KEY in .env");
 }

@@ -95,35 +95,74 @@ export default function PlayerBar() {
     setModalOpen(false)
   }
 
+  const endSession = () => {
+    // Stop all audio playback
+    if (usingYT) {
+      yt.stop()
+    } else {
+      htmlPause()
+    }
+
+    // Clear current video/audio
+    setCurrentVideoId(null)
+
+    // Dispatch session end event
+    window.dispatchEvent(new CustomEvent('session:stop'))
+
+    // Close modal if open
+    setModalOpen(false)
+  }
+
   // Show player if there's content to play - either HTML source or YouTube ready with content
   const hasContent = usingYT ? Boolean(currentVideoId) : Boolean(state.src);
-  log('[playerbar] sourceType:', state.sourceType, 'usingYT:', usingYT, 'ytReady:', yt.isReady(), 'videoId:', currentVideoId, 'src:', state.src, 'hasContent:', hasContent);
 
   if (!hasContent) {
     return null;
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-black/70 text-white backdrop-blur-md pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto max-w-5xl flex items-center gap-3 px-4 py-2">
-        <button aria-label="Play/Pause" onClick={onPlayPause}>
-          {isPlaying ? <Pause size={22} /> : <Play size={22} />}
-        </button>
+    <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-app-surface/95 border-t border-app-border backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-auto max-w-5xl flex items-center gap-4 px-4 py-3">
+        {/* Left controls group */}
+        <div className="flex items-center gap-3">
+          <button
+            aria-label="Play/Pause"
+            onClick={onPlayPause}
+            className="h-10 w-10 rounded-full bg-app-primary text-app-primary-fg hover:bg-app-primary/90 transition-all duration-200 flex items-center justify-center"
+          >
+            {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+          </button>
 
-        <input
-          aria-label="Seek"
-          type="range"
-          min={0}
-          max={Math.max(0, Math.floor(duration))}
-          step={1}
-          value={Math.min(Math.floor(currentTime), Math.floor(duration))}
-          onChange={onSeek}
-          className="flex-1"
-        />
-        <div className="w-16 text-right tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</div>
+          <button
+            aria-label="End Session"
+            onClick={endSession}
+            className="h-8 w-8 rounded-lg border border-app-border bg-app-surface2/80 hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-200 flex items-center justify-center text-app-muted hover:text-red-400"
+            title="End Session"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
-        <button aria-label="Expand" onClick={() => setModalOpen(true)}><Maximize2 size={18} /></button>
-        <button aria-label="Close" onClick={closeAll}><X size={18} /></button>
+        {/* Progress section - takes remaining space */}
+        <div className="flex-1 flex items-center gap-3">
+          <input
+            aria-label="Seek"
+            type="range"
+            min={0}
+            max={Math.max(0, Math.floor(duration))}
+            step={1}
+            value={Math.min(Math.floor(currentTime), Math.floor(duration))}
+            onChange={onSeek}
+            className="flex-1 h-2 bg-app-surface2 rounded-full appearance-none cursor-pointer
+                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4
+                     [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-app-primary [&::-webkit-slider-thumb]:cursor-pointer
+                     [&::-webkit-slider-track]:rounded-full [&::-webkit-slider-track]:bg-app-surface2"
+          />
+          <div className="text-sm text-app-muted tabular-nums whitespace-nowrap">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
+        </div>
+
       </div>
 
       {modalOpen && (
