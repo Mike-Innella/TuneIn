@@ -5,10 +5,20 @@ import { User, Keyboard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useIsMobile } from "../../hooks/use-mobile";
 import AccountPanel from "../AccountPanel";
+import OptionsMenu from "./OptionsMenu";
 
 export function Header() {
   const [showHotkeys, setShowHotkeys] = useState(false);
   const isMobile = useIsMobile();
+
+  const optionItems = [
+    { label: "Settings", onSelect: () => setShowHotkeys(true) },
+    { label: "Profile", onSelect: () => window.dispatchEvent(new CustomEvent("navigate:account")) },
+    { label: "Theme", onSelect: () => {
+      const themeButton = document.querySelector('[aria-label*="Switch to"]');
+      if (themeButton) themeButton.click();
+    }},
+  ];
 
   return (
     <>
@@ -23,17 +33,22 @@ export function Header() {
             />
             <span className="text-2xl font-cursive text-app-text transition-all duration-300 group-hover:text-app-primary group-hover:drop-shadow-sm">TuneIn</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-3">
-            <button
-              onClick={() => setShowHotkeys(true)}
-              className="h-9 w-9 rounded-full border border-app-border bg-app-surface2/80 grid place-items-center hover:bg-app-surface2 hover:border-app-primary/50 hover:scale-110 hover:shadow-lg transition-all duration-300 transform-gpu"
-              aria-label="Keyboard shortcuts (Ctrl + /)"
-              title="Keyboard shortcuts (Ctrl + /)"
-            >
-              <Keyboard className="h-4 w-4 text-app-muted hover:text-app-primary transition-colors duration-300" />
-            </button>
-            <ThemeToggle />
-            <AccountPanel />
+          <nav className="flex items-center gap-3">
+            {/* Desktop navigation */}
+            <div className="hidden md:flex items-center gap-3">
+              <button
+                onClick={() => setShowHotkeys(true)}
+                className="h-9 w-9 rounded-full border border-app-border bg-app-surface2/80 grid place-items-center hover:bg-app-surface2 hover:border-app-primary/50 hover:scale-110 hover:shadow-lg transition-all duration-300 transform-gpu"
+                aria-label="Keyboard shortcuts (Ctrl + /)"
+                title="Keyboard shortcuts (Ctrl + /)"
+              >
+                <Keyboard className="h-4 w-4 text-app-muted hover:text-app-primary transition-colors duration-300" />
+              </button>
+              <ThemeToggle />
+              <AccountPanel />
+            </div>
+            {/* Mobile options menu */}
+            <OptionsMenu items={optionItems} />
           </nav>
         </div>
       </header>
