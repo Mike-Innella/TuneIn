@@ -1,4 +1,4 @@
-import { Heart, Github, Twitter, Mail } from "lucide-react";
+import { Heart, Github, Linkedin, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useIsMobile } from "../../hooks/use-mobile";
 
@@ -10,7 +10,7 @@ export function Footer() {
     <footer className="border-t border-app-border surface mt-auto pb-20">
       <div className="mx-auto max-w-6xl px-4 py-8">
         <div className={`grid gap-8 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-4'}`}>
-          
+
           {/* Brand Section */}
           <div className={`${isMobile ? 'text-center' : 'md:col-span-2'} space-y-4`}>
             <div className="flex items-center gap-3 justify-center md:justify-start">
@@ -23,7 +23,7 @@ export function Footer() {
               <span className="text-2xl font-cursive text-app-text">TuneIn</span>
             </div>
             <p className="text-app-muted text-sm max-w-md">
-              Focus better with mood-based music curation and productivity timers. 
+              Focus better with mood-based music curation and productivity timers.
               Built to help you achieve deep work and creative flow states.
             </p>
           </div>
@@ -32,20 +32,20 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-app-text">Product</h3>
             <div className="flex flex-col space-y-2">
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className="text-sm text-app-muted hover:text-app-text transition-colors duration-200"
               >
                 Focus Timer
               </Link>
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className="text-sm text-app-muted hover:text-app-text transition-colors duration-200"
               >
                 Mood Selection
               </Link>
-              <Link 
-                to="/account" 
+              <Link
+                to="/account"
                 className="text-sm text-app-muted hover:text-app-text transition-colors duration-200"
               >
                 Account Settings
@@ -57,14 +57,14 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-app-text">Support</h3>
             <div className="flex flex-col space-y-2">
-              <a 
-                href="mailto:support@tunein-focus.com" 
+              <a
+                href="mailto:support@tunein-focus.com"
                 className="text-sm text-app-muted hover:text-app-text transition-colors duration-200 flex items-center gap-2"
               >
                 <Mail size={14} />
                 Contact
               </a>
-              <button 
+              <button
                 onClick={() => {
                   const event = new KeyboardEvent('keydown', {
                     key: '/',
@@ -105,7 +105,7 @@ export function Footer() {
           {/* Social Links */}
           <div className="flex items-center gap-4">
             <a
-              href="https://github.com/Mike-Innella/TuneIn"
+              href="https://github.com/Mike-Innella"
               target="_blank"
               rel="noopener noreferrer"
               className="h-8 w-8 rounded-full border border-app-border bg-app-surface2/80 grid place-items-center hover:bg-app-surface2 hover:border-app-primary/50 hover:scale-110 transition-all duration-300"
@@ -114,13 +114,13 @@ export function Footer() {
               <Github className="h-4 w-4 text-app-muted hover:text-app-primary transition-colors duration-300" />
             </a>
             <a
-              href="#"
+              href="https://www.linkedin.com/in/mainnella/"
               target="_blank"
               rel="noopener noreferrer"
               className="h-8 w-8 rounded-full border border-app-border bg-app-surface2/80 grid place-items-center hover:bg-app-surface2 hover:border-app-primary/50 hover:scale-110 transition-all duration-300"
-              aria-label="Follow on Twitter"
+              aria-label="Follow on LinkedIn"
             >
-              <Twitter className="h-4 w-4 text-app-muted hover:text-app-primary transition-colors duration-300" />
+              <Linkedin className="h-4 w-4 text-app-muted hover:text-app-primary transition-colors duration-300" />
             </a>
           </div>
         </div>

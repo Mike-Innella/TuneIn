@@ -2,53 +2,47 @@ import { useState } from 'react';
 import { MOOD_QUERIES } from '../config/moods';
 import { MOOD_DURATIONS } from '../lib/focusConfig';
 import { Loader2 } from 'lucide-react';
-import * as yt from '../player/ytController';
+import { searchYouTube } from '../lib/youtubeApi';
 import { log, warn, error } from '../lib/logger';
 
 export default function MoodPicker() {
   const [loading, setLoading] = useState(null);
+  const [searchError, setSearchError] = useState("");
 
   const handleMoodSelect = async (mood) => {
+    if (loading) return;
+    setSearchError("");
     setLoading(mood);
+
     try {
       log('[mood] clicked', mood);
 
       // 1) Build query from mood mapping
-      const q = MOOD_QUERIES[mood] || `${mood} music`;
+      const query = MOOD_QUERIES[mood] || `${mood} instrumental focus music`;
 
-      // 2) Call serverless search
-      const response = await fetch(`/api/youtubeSearch?q=${encodeURIComponent(q)}`);
+      // 2) Search YouTube using new backend
+      const { items } = await searchYouTube(query);
 
-      if (!response.ok) {
-        error('youtubeSearch failed', response.status);
+      if (!items || items.length === 0) {
+        setSearchError("No results. Try a different mood.");
         return;
       }
 
-      const data = await response.json(); // { videoIds: string[] }
-
-      const firstId = data?.videoIds?.[0];
-      if (!firstId) return;
-
-      // 3) Switch to YouTube source
-      window.dispatchEvent(new CustomEvent('audio:set_source', { detail: 'youtube' }));
-
-      // 4) Cue the first result (no autoplay - requires user gesture)
-      if (yt.isReady()) {
-        yt.cue(firstId);
-        log('[mood] cued video', firstId);
-      } else {
-        warn('[mood] YouTube player not ready, waiting...');
-        // Wait for YouTube player to be ready, then cue the video
-        const checkReady = setInterval(() => {
-          if (yt.isReady()) {
-            clearInterval(checkReady);
-            yt.cue(firstId);
-            log('[mood] cued video after wait', firstId);
-          }
-        }, 100);
-        // Give up after 5 seconds
-        setTimeout(() => clearInterval(checkReady), 5000);
+      // Choose first result; you can add shuffle later:
+      const first = items[0];
+      if (!first.videoId) {
+        setSearchError("No valid videos found.");
+        return;
       }
+
+      // 3) Dispatch player load event with videoId and playlist
+      window.dispatchEvent(new CustomEvent("player:load", {
+        detail: {
+          sourceType: "youtube",
+          videoId: first.videoId,
+          playlist: items
+        }
+      }));
 
       // Dispatch mood selection event for Pomodoro integration
       const duration = MOOD_DURATIONS[mood] || 25;
@@ -56,16 +50,23 @@ export default function MoodPicker() {
         detail: { mood, duration }
       }));
 
-    } catch (error) {
-      error('Failed to load mood:', error);
+    } catch (e) {
+      error('Failed to load mood:', e);
+      setSearchError("Search failed. Check backend/api key.");
     } finally {
       setLoading(null);
     }
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-6">
-      {Object.keys(MOOD_QUERIES).map((mood) => (
+    <div className="p-6">
+      {searchError && (
+        <div className="text-sm text-red-400 mb-4 text-center bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+          {searchError}
+        </div>
+      )}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {Object.keys(MOOD_QUERIES).map((mood) => (
         <button
           key={mood}
           onClick={() => handleMoodSelect(mood)}
@@ -90,7 +91,8 @@ export default function MoodPicker() {
             </div>
           )}
         </button>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

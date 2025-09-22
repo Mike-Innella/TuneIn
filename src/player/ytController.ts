@@ -81,8 +81,12 @@ export async function mount(elId: string, initialVideoId?: string) {
   }).then(() => {
     if (pollId) window.clearInterval(pollId);
     pollId = window.setInterval(() => {
-      pushState();
-    }, 250);
+      if (!player || !ready) return; // prevent polling when not ready
+      const dur = safe(() => player!.getDuration()) ?? 0;
+      if (dur > 0) {
+        pushState();
+      }
+    }, 500);
   });
 }
 

@@ -2,10 +2,12 @@ import { supabase } from '../lib/supabaseClient';
 import { useSession } from '../hooks/useSession';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { User, LogOut } from 'lucide-react';
 
 export default function AccountPanel() {
   const { session } = useSession();
+  const navigate = useNavigate();
   const user = session?.user;
   const [fullName, setFullName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -47,7 +49,10 @@ export default function AccountPanel() {
     load();
   }, [user?.id]);
 
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth', { replace: true });
+  };
 
 
   const saveProfile = async () => {
