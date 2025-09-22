@@ -30,7 +30,6 @@ import { GlobalAudioProvider, useGlobalAudio } from './audio/GlobalAudioProvider
 import PlayerBar from './components/PlayerBar'
 import * as yt from './player/ytController'
 import MoodPicker from './components/MoodPicker'
-import MobileCommandBar from './components/MobileCommandBar'
 import YouTubeMount from './player/YouTubeMount'
 
 // Existing components
@@ -54,7 +53,6 @@ import Account from './pages/Account'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Mobile components
-import { MobileNav } from './components/MobileNav'
 import { MoodSheet } from './components/MoodSheet'
 import { MoreSheet } from './components/MoreSheet'
 import { useIsMobile } from './hooks/use-mobile'
@@ -438,7 +436,7 @@ function HomePage({ showToast, onToggleTheme, onShowHelp }) {
 
   return (
     <PageFade>
-      <main className={`container mx-auto px-4 py-8 ${isMobile ? 'pb-24' : ''}`}>
+      <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto grid gap-8">
           
           {/* Pomodoro Timer Section */}
@@ -484,10 +482,8 @@ function App() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showHotkeys, setShowHotkeys] = useState(false);
-  const isMobile = useIsMobile();
-  const [uiState, updateUIState] = useUIState();
 
-  // Listen for custom navigation events fired by MobileCommandBar, etc.
+  // Listen for custom navigation events
   useEffect(() => {
     function toAccount() { navigate('/account'); }
     window.addEventListener('navigate:account', toAccount);
@@ -512,46 +508,6 @@ function App() {
 
   const handleShowHelp = () => {
     setShowHotkeys(true);
-  };
-
-  const handleMobileNavigate = (section) => {
-    // Handle mobile navigation
-    switch (section) {
-      case 'home':
-        // Navigate to home - could scroll to top or change route
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        break;
-      case 'timer':
-        // Scroll to timer section
-        const timerSection = document.querySelector('section');
-        if (timerSection) {
-          timerSection.scrollIntoView({ behavior: 'smooth' });
-        }
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleMoodSelect = (moodName) => {
-    // Find the mood object by name
-    const mood = MOODS.find(m => m.name === moodName);
-    if (mood) {
-      // Trigger existing mood selection logic
-      const moodSelectEvent = new CustomEvent('mood:selected', {
-        detail: { mood: mood.name, duration: mood.default_session_duration }
-      });
-      window.dispatchEvent(moodSelectEvent);
-      handleShowToast(`${mood.name} mood selected`);
-    }
-  };
-
-  const handleDurationSet = (minutes) => {
-    // Dispatch timer duration event
-    window.dispatchEvent(new CustomEvent('timer:duration-set', {
-      detail: { duration: minutes }
-    }));
-    handleShowToast(`Timer set to ${minutes} minutes`);
   };
 
   return (
@@ -588,19 +544,6 @@ function App() {
                     {/* YouTube Player Bar - Keep for existing functionality */}
                     <PlayerBar />
 
-                    {/* Mobile Command Bar */}
-                    {isMobile && (
-                      <MobileCommandBar
-                        onSetMood={handleMoodSelect}
-                        onSetDuration={handleDurationSet}
-                        onOpenProfile={() => {
-                          // Use React Router navigation instead of window.location
-                          const event = new CustomEvent('navigate:account');
-                          window.dispatchEvent(event);
-                          handleShowToast('Opening profile...');
-                        }}
-                      />
-                    )}
 
                     {/* Footer */}
                     <Footer />
