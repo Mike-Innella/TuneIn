@@ -82,13 +82,16 @@ export default function OptionsMenu({ items = [] }) {
                     <li key={idx}>
                       <button
                         type="button"
-                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-app-text hover:bg-app-surface2 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-lg text-sm text-app-text hover:bg-app-surface2 transition-colors flex items-center justify-between"
                         onClick={() => {
                           setOpen(false);
                           item.onSelect?.();
                         }}
                       >
-                        {item.label}
+                        <span>{item.label}</span>
+                        {item.icon && (
+                          <item.icon className="h-4 w-4 text-app-muted" />
+                        )}
                       </button>
                     </li>
                   ))}

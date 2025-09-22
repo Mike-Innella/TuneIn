@@ -11,6 +11,7 @@ export default function PlayerBar() {
   const { state, play: htmlPlay, pause: htmlPause, seek: htmlSeek, setVolume: htmlSetVolume, setMuted: htmlSetMuted } = useGlobalAudio()
   const [modalOpen, setModalOpen] = useState(false)
   const [ytState, setYtState] = useState({ currentTime: 0, duration: 0, playing: false })
+  const [currentVideoId, setCurrentVideoId] = useState(null)
 
   const usingYT = (typeof window !== 'undefined') && yt.isReady() && state.sourceType === 'youtube'
 
@@ -28,8 +29,39 @@ export default function PlayerBar() {
   // Event bridges for external control
   useEffect(() => {
     function onOpen() { setModalOpen(true); }
+    function onLoad(e) {
+      const { sourceType, videoId, playlist } = e.detail || {};
+      if (sourceType !== "youtube" || !videoId) return;
+
+      // Set audio source to YouTube
+      window.dispatchEvent(new CustomEvent('audio:set_source', { detail: 'youtube' }));
+
+      // Only load if we have a valid videoId and player is ready
+      if (yt.isReady()) {
+        yt.cue(videoId);
+        setCurrentVideoId(videoId);
+        log('[playerbar] cued video', videoId);
+      } else {
+        // Wait for YouTube player to be ready, then cue the video
+        const checkReady = setInterval(() => {
+          if (yt.isReady()) {
+            clearInterval(checkReady);
+            yt.cue(videoId);
+            setCurrentVideoId(videoId);
+            log('[playerbar] cued video after wait', videoId);
+          }
+        }, 100);
+        // Give up after 5 seconds
+        setTimeout(() => clearInterval(checkReady), 5000);
+      }
+    }
+
     window.addEventListener('player:open', onOpen);
-    return () => window.removeEventListener('player:open', onOpen);
+    window.addEventListener('player:load', onLoad);
+    return () => {
+      window.removeEventListener('player:open', onOpen);
+      window.removeEventListener('player:load', onLoad);
+    };
   }, []);
 
   const startFocusSession = () => {
@@ -64,8 +96,8 @@ export default function PlayerBar() {
   }
 
   // Show player if there's content to play - either HTML source or YouTube ready with content
-  const hasContent = usingYT ? true : Boolean(state.src);
-  log('[playerbar] sourceType:', state.sourceType, 'usingYT:', usingYT, 'ytReady:', yt.isReady(), 'src:', state.src, 'hasContent:', hasContent);
+  const hasContent = usingYT ? Boolean(currentVideoId) : Boolean(state.src);
+  log('[playerbar] sourceType:', state.sourceType, 'usingYT:', usingYT, 'ytReady:', yt.isReady(), 'videoId:', currentVideoId, 'src:', state.src, 'hasContent:', hasContent);
 
   if (!hasContent) {
     return null;

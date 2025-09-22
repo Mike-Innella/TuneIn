@@ -4,9 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev:client": "vite",
+    "dev:server": "cd server && npm run dev",
+    "dev": "npx concurrently -k \"npm:dev:client\" \"npm:dev:server\"",
     "dev:api": "node server.js",
-    "dev:full": "concurrently \"npm run dev:api\" \"npm run dev\"",
+    "dev:full": "concurrently \"npm run dev:api\" \"npm run dev:client\"",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { HotkeyOverlay } from "./HotkeyOverlay";
-import { User, Keyboard } from "lucide-react";
+import { MobileShortcutsOverlay } from "./MobileShortcutsOverlay";
+import { User, Keyboard, Smartphone, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useIsMobile } from "../../hooks/use-mobile";
 import AccountPanel from "../AccountPanel";
@@ -9,15 +10,28 @@ import OptionsMenu from "./OptionsMenu";
 
 export function Header() {
   const [showHotkeys, setShowHotkeys] = useState(false);
+  const [showMobileShortcuts, setShowMobileShortcuts] = useState(false);
   const isMobile = useIsMobile();
 
   const optionItems = [
-    { label: "Settings", onSelect: () => setShowHotkeys(true) },
-    { label: "Profile", onSelect: () => window.dispatchEvent(new CustomEvent("navigate:account")) },
-    { label: "Theme", onSelect: () => {
-      const themeButton = document.querySelector('[aria-label*="Switch to"]');
-      if (themeButton) themeButton.click();
-    }},
+    {
+      label: isMobile ? "Gestures" : "Shortcuts",
+      icon: isMobile ? Smartphone : Keyboard,
+      onSelect: () => isMobile ? setShowMobileShortcuts(true) : setShowHotkeys(true)
+    },
+    {
+      label: "Profile",
+      icon: User,
+      onSelect: () => window.dispatchEvent(new CustomEvent("navigate:account"))
+    },
+    {
+      label: "Theme",
+      icon: Palette,
+      onSelect: () => {
+        const themeButton = document.querySelector('[aria-label*="Switch to"]');
+        if (themeButton) themeButton.click();
+      }
+    },
   ];
 
   return (
@@ -53,9 +67,14 @@ export function Header() {
         </div>
       </header>
 
-      <HotkeyOverlay 
-        isOpen={showHotkeys} 
-        onClose={() => setShowHotkeys(false)} 
+      <HotkeyOverlay
+        isOpen={showHotkeys}
+        onClose={() => setShowHotkeys(false)}
+      />
+
+      <MobileShortcutsOverlay
+        isOpen={showMobileShortcuts}
+        onClose={() => setShowMobileShortcuts(false)}
       />
     </>
   );
