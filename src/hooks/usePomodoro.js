@@ -93,6 +93,9 @@ export function usePomodoro(initial = "Pomodoro") {
           setStatus("done");
           window.dispatchEvent(new CustomEvent("session:end", { detail: { kind } }));
 
+          // Stop playlist/queue when session ends
+          window.dispatchEvent(new CustomEvent("playlist:ended"));
+
           // update counters, decide next kind
           if (kind === "Pomodoro") {
             setCompletedPomodoros((n) => n + 1);
@@ -106,6 +109,12 @@ export function usePomodoro(initial = "Pomodoro") {
         if (nextVal === Math.floor(total / 2)) {
           window.dispatchEvent(new CustomEvent("session:midpoint", { detail: { kind } }));
         }
+
+        // Dispatch tick event for session timer integration
+        window.dispatchEvent(new CustomEvent("pomodoro:tick", {
+          detail: { secondsLeft: nextVal, kind }
+        }));
+
         return nextVal;
       });
     }, 1000);

@@ -10,10 +10,17 @@ import AuthGate from './features/auth/AuthGate';
 import MainApp from './features/app/MainApp';
 import ProtectedRoute from './components/ProtectedRoute';
 import ResetPassword from './components/ResetPassword';
+import { useEffect } from 'react';
+import { initializeSessionTimer } from './lib/sessionTimer';
 
 
 
 export default function App() {
+  // Initialize session timer on app start
+  useEffect(() => {
+    initializeSessionTimer();
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>

@@ -6,6 +6,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize2, X } fr
 import PlayerModal from './player/PlayerModal'
 import * as yt from '../player/ytController'
 import { log } from '../lib/logger'
+import { getGlobalQueueManager } from '../lib/queueManager'
 
 export default function PlayerBar() {
   const { state, play: htmlPlay, pause: htmlPause, seek: htmlSeek, setVolume: htmlSetVolume, setMuted: htmlSetMuted } = useGlobalAudio()
@@ -13,6 +14,7 @@ export default function PlayerBar() {
   const [modalOpen, setModalOpen] = useState(false)
   const [ytState, setYtState] = useState({ currentTime: 0, duration: 0, playing: false })
   const [currentVideoId, setCurrentVideoId] = useState(null)
+  const [queueInfo, setQueueInfo] = useState({ current: 0, total: 0, track: null })
 
   const usingYT =
     typeof window !== 'undefined' &&
@@ -40,7 +42,44 @@ export default function PlayerBar() {
     const unsub = yt.subscribe?.((s) => {
       setYtState(s)
     })
-    return () => yt.subscribe?.(null) // clear subscription on unmount
+
+    // Set up YouTube player event listener for queue management
+    const setupYouTubeListener = () => {
+      if (yt.isReady() && window.YT && window.YT.Player) {
+        try {
+          const player = yt.getPlayer?.();
+          if (player && player.addEventListener) {
+            const onStateChange = (event) => {
+              const qm = getGlobalQueueManager();
+              if (qm) {
+                qm.onPlayerStateChange(event);
+                // Update queue info when track changes
+                const info = qm.getQueueInfo();
+                const currentTrack = qm.getCurrentTrack();
+                setQueueInfo({
+                  current: info.current,
+                  total: info.total,
+                  track: currentTrack
+                });
+              }
+            };
+            player.addEventListener('onStateChange', onStateChange);
+            console.log('[PlayerBar] YouTube event listener set up successfully');
+          }
+        } catch (error) {
+          console.warn('[PlayerBar] Error setting up YouTube event listener:', error);
+        }
+      }
+    };
+
+    // Try to set up listener immediately, and also on a delay for YouTube readiness
+    setupYouTubeListener();
+    const setupTimer = setTimeout(setupYouTubeListener, 1000);
+
+    return () => {
+      clearTimeout(setupTimer);
+      yt.subscribe?.(null);
+    };
   }, [])
 
   const isPlaying = usingYT ? ytState.playing : state.playing
@@ -51,7 +90,7 @@ export default function PlayerBar() {
   useEffect(() => {
     function onOpen() { setModalOpen(true); }
     function onLoad(e) {
-      const { sourceType, videoId, playlist } = e.detail || {};
+      const { sourceType, videoId, playlist, queue, isPlaylist } = e.detail || {};
       if (sourceType !== "youtube" || !videoId) return;
 
       // Set audio source to YouTube
@@ -59,6 +98,17 @@ export default function PlayerBar() {
 
       // Update player context
       load({ sourceType: 'youtube', src: videoId });
+
+      // Update queue info if this is a playlist
+      if (isPlaylist && queue && queue.length > 0) {
+        setQueueInfo({
+          current: 0,
+          total: queue.length,
+          track: queue[0]
+        });
+      } else {
+        setQueueInfo({ current: 0, total: 1, track: null });
+      }
 
       // Only load if we have a valid videoId and player is ready
       if (yt.isReady()) {
@@ -80,19 +130,42 @@ export default function PlayerBar() {
       }
     }
 
+    function onQueueStart(e) {
+      const { queue } = e.detail || {};
+      const qm = getGlobalQueueManager();
+      if (qm && queue) {
+        log('[playerbar] Starting queue with', queue.length, 'tracks');
+        qm.startQueue(queue);
+        setQueueInfo({
+          current: 0,
+          total: queue.length,
+          track: queue[0]
+        });
+      }
+    }
+
     function onClear() {
       // Clear all player state to hide the player bar
       setCurrentVideoId(null);
       load({ src: null, sourceType: null });
       setModalOpen(false);
+      setQueueInfo({ current: 0, total: 0, track: null });
+
+      // Destroy queue manager
+      const qm = getGlobalQueueManager();
+      if (qm) {
+        qm.destroy();
+      }
     }
 
     window.addEventListener('player:open', onOpen);
     window.addEventListener('player:load', onLoad);
+    window.addEventListener('queue:start', onQueueStart);
     window.addEventListener('player:clear', onClear);
     return () => {
       window.removeEventListener('player:open', onOpen);
       window.removeEventListener('player:load', onLoad);
+      window.removeEventListener('queue:start', onQueueStart);
       window.removeEventListener('player:clear', onClear);
     };
   }, [load]);
@@ -141,6 +214,15 @@ export default function PlayerBar() {
 
     // Clear player context state
     load({ src: null, sourceType: null })
+
+    // Clear queue info
+    setQueueInfo({ current: 0, total: 0, track: null });
+
+    // Destroy queue manager
+    const qm = getGlobalQueueManager();
+    if (qm) {
+      qm.destroy();
+    }
 
     // Dispatch session end event
     window.dispatchEvent(new CustomEvent('session:stop'))
@@ -194,6 +276,11 @@ export default function PlayerBar() {
           />
           <div className="text-sm text-app-muted tabular-nums whitespace-nowrap">
             {formatTime(currentTime)} / {formatTime(duration)}
+            {queueInfo.total > 1 && (
+              <span className="ml-2 text-xs">
+                ({queueInfo.current + 1}/{queueInfo.total})
+              </span>
+            )}
           </div>
         </div>
 

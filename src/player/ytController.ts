@@ -139,6 +139,22 @@ export function load(videoId: string) {
   player!.loadVideoById(videoId);
 }
 
+export function loadVideoWithOptions(options: {
+  videoId: string;
+  startSeconds?: number;
+  endSeconds?: number;
+  suggestedQuality?: string;
+}) {
+  if (!isReady()) return;
+  // Unmute for actual playback
+  try {
+    player!.unMute();
+  } catch (e) {
+    console.warn('Could not unmute player:', e);
+  }
+  player!.loadVideoById(options);
+}
+
 export function play() {
   if (!isReady()) return;
   player!.playVideo(); // call from a user click handler
@@ -157,6 +173,10 @@ export function stop() {
 export function seek(seconds: number) {
   if (!isReady()) return;
   player!.seekTo(seconds, true);
+}
+
+export function getPlayer() {
+  return player;
 }
 
 export function destroy() {

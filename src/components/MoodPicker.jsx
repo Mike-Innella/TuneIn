@@ -4,6 +4,9 @@ import { MOOD_DURATIONS } from '../lib/focusConfig';
 import { Loader2 } from 'lucide-react';
 import { searchYouTube } from '../lib/youtubeApi';
 import { log, warn, error } from '../lib/logger';
+import { buildPlaylistToDuration, normalizeYouTubeResults } from '../lib/playlistBuilder';
+import { initializeGlobalQueueManager } from '../lib/queueManager';
+import { getSessionRemaining } from '../lib/sessionTimer';
 
 export default function MoodPicker() {
   const [loading, setLoading] = useState(null);
@@ -20,32 +23,74 @@ export default function MoodPicker() {
       // 1) Build query from mood mapping
       const query = MOOD_QUERIES[mood] || `${mood} instrumental focus music`;
 
-      // 2) Search YouTube using new backend
-      const { items: raw = [] } = await searchYouTube(query);
-      const items = raw
-        .map(v => ({ ...v, videoId: v.videoId || v.id }))
-        .filter(v => !!v.videoId);
+      // 2) Search YouTube for more tracks to build a proper playlist (increased count)
+      const { items: raw = [] } = await searchYouTube(query, 35);
+      const normalizedItems = normalizeYouTubeResults(raw);
 
-      if (items.length === 0) {
+      if (normalizedItems.length === 0) {
         setSearchError("No valid videos found.");
         return;
       }
 
-      const first = items[0];
+      // 3) Get session duration for this mood (in seconds)
+      const durationMinutes = MOOD_DURATIONS[mood] || 25;
+      const sessionDurationSec = durationMinutes * 60;
 
-      // 3) Dispatch player load event with videoId and playlist
+      // 4) Build playlist to match session duration
+      const playlistResult = buildPlaylistToDuration(normalizedItems, sessionDurationSec);
+
+      if (!playlistResult || !playlistResult.queue) {
+        setSearchError("Failed to build playlist - invalid result.");
+        return;
+      }
+
+      const { queue, total } = playlistResult;
+
+      log(`[mood] Built playlist: ${queue.length} tracks, ${Math.round(total/60)}min total for ${durationMinutes}min session`);
+
+      if (queue.length === 0) {
+        setSearchError("Could not build playlist for session duration. Try a different mood.");
+        return;
+      }
+
+      // 5) Initialize queue manager with session timer integration
+      const queueManager = initializeGlobalQueueManager({
+        onQueueEnd: () => {
+          console.log('[mood] Playlist completed or session ended');
+          window.dispatchEvent(new CustomEvent('playlist:ended'));
+        },
+        getSessionRemainingSec: () => {
+          // Get actual remaining time from session timer
+          return getSessionRemaining();
+        }
+      });
+
+      // 6) Dispatch player load event with first track and queue info
+      const firstTrack = queue[0];
       window.dispatchEvent(new CustomEvent("player:load", {
         detail: {
           sourceType: "youtube",
-          videoId: first.videoId,
-          playlist: items
+          videoId: firstTrack.videoId,
+          playlist: queue, // Full queue for display purposes
+          queue: queue,    // Queue for the queue manager
+          isPlaylist: true,
+          totalDuration: total
         }
       }));
 
-      // Dispatch mood selection event for Pomodoro integration
-      const duration = MOOD_DURATIONS[mood] || 25;
+      // 7) Start the queue (this will be handled by the player when it's ready)
+      window.dispatchEvent(new CustomEvent("queue:start", {
+        detail: { queue }
+      }));
+
+      // 8) Dispatch mood selection event for Pomodoro integration
       window.dispatchEvent(new CustomEvent('mood:selected', {
-        detail: { mood, duration }
+        detail: {
+          mood,
+          duration: durationMinutes,
+          playlist: queue,
+          totalDuration: total
+        }
       }));
 
     } catch (e) {
