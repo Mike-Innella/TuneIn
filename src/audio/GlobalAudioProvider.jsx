@@ -4,6 +4,8 @@ export const GlobalAudioContext = createContext(null);
 
 export function GlobalAudioProvider({ children }) {
   const audioRef = useRef(null);
+  const userInteractedRef = useRef(false);
+  const audioCtxRef = useRef(null);
   const [state, setState] = useState({
     sourceType: 'html',       // 'html' | 'youtube'
     src: '',
@@ -51,6 +53,30 @@ export function GlobalAudioProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    const onFirstGesture = async () => {
+      userInteractedRef.current = true;
+      try {
+        if (!audioCtxRef.current) {
+          const C = window.AudioContext || window.webkitAudioContext;
+          if (C) audioCtxRef.current = new C();
+        }
+        await audioCtxRef.current?.resume?.();
+      } catch {}
+      window.removeEventListener('pointerdown', onFirstGesture, { capture: true });
+      window.removeEventListener('keydown', onFirstGesture, { capture: true });
+      window.removeEventListener('touchstart', onFirstGesture, { capture: true });
+    };
+    window.addEventListener('pointerdown', onFirstGesture, { capture: true, once: true });
+    window.addEventListener('keydown', onFirstGesture, { capture: true, once: true });
+    window.addEventListener('touchstart', onFirstGesture, { capture: true, once: true });
+    return () => {
+      window.removeEventListener('pointerdown', onFirstGesture, { capture: true });
+      window.removeEventListener('keydown', onFirstGesture, { capture: true });
+      window.removeEventListener('touchstart', onFirstGesture, { capture: true });
+    };
+  }, []);
+
   const load = useCallback((src, meta = {}) => {
     const el = audioRef.current;
     if (!el) return;
@@ -74,6 +100,7 @@ export function GlobalAudioProvider({ children }) {
   }, []);
 
   const play = useCallback(async () => {
+    if (!userInteractedRef.current) return; // wait for a gesture (autoplay policy)
     const el = audioRef.current;
     if (!el) return;
     // Must be called from a user gesture to satisfy autoplay rules

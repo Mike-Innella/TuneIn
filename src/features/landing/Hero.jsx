@@ -1,19 +1,12 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { Music, Music2, Music3, Music4, Volume2, Radio } from "lucide-react";
 
 export default function Hero() {
   const nav = useNavigate();
-  const [session, setSession] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-  }, []);
 
   const handleStart = () => {
-    if (session) nav("/app");
-    else nav("/auth");
+    nav("/auth");
   };
 
   const floatingIcons = [

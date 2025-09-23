@@ -33,22 +33,6 @@ app.get('/api/youtubeSearch', async (req, res) => {
 
     console.log('YouTube search request for:', q);
 
-    // For development, return mock data if API key is restricted
-    if (process.env.NODE_ENV !== 'production' && process.env.USE_MOCK_DATA === 'true') {
-      console.log('Returning mock YouTube data for development');
-      return res.json({
-        videoIds: ['dQw4w9WgXcQ', 'jNQXAC9IVRw', 'y6120QOlsfU'],
-        items: [
-          {
-            id: 'dQw4w9WgXcQ',
-            title: `${mood || 'Lofi'} Focus Music`,
-            artist: 'Sample Artist',
-            artwork: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg'
-          }
-        ],
-        nextPageToken: null
-      });
-    }
 
     const params = new URLSearchParams({
       part: 'snippet',
@@ -80,12 +64,12 @@ app.get('/api/youtubeSearch', async (req, res) => {
       const txt = await r.text();
       console.error('YouTube API error:', r.status, txt);
 
-      // If it's a 403 error due to referrer restrictions, suggest using mock data
+      // If it's a 403 error due to referrer restrictions, provide API key guidance
       if (r.status === 403 && txt.includes('referer')) {
         return res.status(500).json({
           error: 'YouTube API referrer restriction',
-          details: 'API key has referrer restrictions. For development, you can:\n1. Add localhost:5173 to API key restrictions in Google Cloud Console\n2. Create an unrestricted API key for development\n3. Set USE_MOCK_DATA=true in .env.local to use mock data',
-          suggestion: 'Add USE_MOCK_DATA=true to your .env.local file to use mock data for development'
+          details: 'API key has referrer restrictions. For development, you can:\n1. Add localhost:5173 to API key restrictions in Google Cloud Console\n2. Create an unrestricted API key for development',
+          suggestion: 'Configure your API key restrictions in Google Cloud Console'
         });
       }
 

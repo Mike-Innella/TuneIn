@@ -7,15 +7,27 @@ export default function ProtectedRoute({ children }) {
   const [session, setSession] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
+
     supabase.auth.getSession().then(({ data }) => {
+      console.log('[ProtectedRoute] Initial session check:', !!data.session);
+      if (!mounted) return;
       setSession(data.session);
       setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, newSession) => {
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('[ProtectedRoute] Auth state change:', event, !!newSession);
+      if (!mounted) return;
       setSession(newSession);
+      if (loading) setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+
+    return () => {
+      mounted = false;
+      sub?.subscription?.unsubscribe?.();
+    };
+  }, [loading]);
 
   if (loading) {
     return (

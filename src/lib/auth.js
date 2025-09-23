@@ -9,9 +9,16 @@ export async function signInWithEmail(email) {
 }
 
 export async function signInWithGoogle() {
+  const siteUrl =
+    import.meta.env.VITE_SITE_URL ??
+    (typeof window !== 'undefined' ? window.location.origin : '');
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin }
+    options: {
+      redirectTo: `${siteUrl}/app`,
+      queryParams: { access_type: 'offline', prompt: 'consent' }
+    }
   });
   if (error) throw error;
 }

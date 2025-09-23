@@ -9,13 +9,34 @@ import { log } from '../lib/logger'
 
 export default function PlayerBar() {
   const { state, play: htmlPlay, pause: htmlPause, seek: htmlSeek, setVolume: htmlSetVolume, setMuted: htmlSetMuted } = useGlobalAudio()
+  const { state: playerState, ui, load } = usePlayer()
   const [modalOpen, setModalOpen] = useState(false)
   const [ytState, setYtState] = useState({ currentTime: 0, duration: 0, playing: false })
   const [currentVideoId, setCurrentVideoId] = useState(null)
 
-  const usingYT = (typeof window !== 'undefined') && yt.isReady() && state.sourceType === 'youtube'
+  const usingYT =
+    typeof window !== 'undefined' &&
+    (state.sourceType === 'youtube' || playerState?.sourceType === 'youtube') &&
+    yt.isReady();
 
   useEffect(() => {
+    // Initialize YouTube player if not already done
+    if (!yt.isInitialized()) {
+      // Create hidden div for YouTube player
+      let ytHost = document.getElementById('yt-player-host');
+      if (!ytHost) {
+        ytHost = document.createElement('div');
+        ytHost.id = 'yt-player-host';
+        ytHost.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;';
+        document.body.appendChild(ytHost);
+
+        // Mount YouTube player
+        yt.mount('yt-player-host').catch(err => {
+          console.warn('Failed to mount YouTube player:', err);
+        });
+      }
+    }
+
     const unsub = yt.subscribe?.((s) => {
       setYtState(s)
     })
@@ -35,6 +56,9 @@ export default function PlayerBar() {
 
       // Set audio source to YouTube
       window.dispatchEvent(new CustomEvent('audio:set_source', { detail: 'youtube' }));
+
+      // Update player context
+      load({ sourceType: 'youtube', src: videoId });
 
       // Only load if we have a valid videoId and player is ready
       if (yt.isReady()) {
@@ -56,13 +80,22 @@ export default function PlayerBar() {
       }
     }
 
+    function onClear() {
+      // Clear all player state to hide the player bar
+      setCurrentVideoId(null);
+      load({ src: null, sourceType: null });
+      setModalOpen(false);
+    }
+
     window.addEventListener('player:open', onOpen);
     window.addEventListener('player:load', onLoad);
+    window.addEventListener('player:clear', onClear);
     return () => {
       window.removeEventListener('player:open', onOpen);
       window.removeEventListener('player:load', onLoad);
+      window.removeEventListener('player:clear', onClear);
     };
-  }, []);
+  }, [load]);
 
   const startFocusSession = () => {
     window.dispatchEvent(new CustomEvent('session:start'))
@@ -106,6 +139,9 @@ export default function PlayerBar() {
     // Clear current video/audio
     setCurrentVideoId(null)
 
+    // Clear player context state
+    load({ src: null, sourceType: null })
+
     // Dispatch session end event
     window.dispatchEvent(new CustomEvent('session:stop'))
 
@@ -114,11 +150,9 @@ export default function PlayerBar() {
   }
 
   // Show player if there's content to play - either HTML source or YouTube ready with content
-  const hasContent = usingYT ? Boolean(currentVideoId) : Boolean(state.src);
+  const hasContent = usingYT ? Boolean(currentVideoId) : Boolean(state.src || playerState?.src);
 
-  if (!hasContent) {
-    return null;
-  }
+  if (!hasContent) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-app-surface/95 border-t border-app-border backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">

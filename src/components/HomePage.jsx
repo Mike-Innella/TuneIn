@@ -21,10 +21,8 @@ import {
 // Audio System
 import { PlayerProvider } from '../player/PlayerContext'
 import { GlobalAudioProvider, useGlobalAudio } from '../audio/GlobalAudioProvider'
-import PlayerBar from './PlayerBar'
 import * as yt from '../player/ytController'
 import MoodPicker from './MoodPicker'
-import YouTubeMount from '../player/YouTubeMount'
 
 // Existing components
 import Nav from './Nav'

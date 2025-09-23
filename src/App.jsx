@@ -1,15 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ErrorBoundary } from './components/ErrorBoundary'
-import { ThemeProvider } from './components/ThemeProvider'
-import { PlayerProvider } from './player/PlayerContext'
-import { GlobalAudioProvider } from './audio/GlobalAudioProvider'
-import YouTubeMount from './player/YouTubeMount'
-import PlayerBar from './components/PlayerBar'
-import Hero from './features/landing/Hero'
-import AuthGate from './features/auth/AuthGate'
-import MainApp from './features/app/MainApp'
-import ProtectedRoute from './components/ProtectedRoute'
-import ResetPassword from './components/ResetPassword'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ThemeProvider } from './components/ThemeProvider';
+import { PlayerProvider } from './player/PlayerContext';
+import { GlobalAudioProvider } from './audio/GlobalAudioProvider';
+import PlayerBar from './components/PlayerBar';
+// import YouTubeMount from './player/YouTubeMount';
+import Hero from './features/landing/Hero';
+import AuthGate from './features/auth/AuthGate';
+import MainApp from './features/app/MainApp';
+import ProtectedRoute from './components/ProtectedRoute';
+import ResetPassword from './components/ResetPassword';
 
 
 
@@ -21,16 +21,15 @@ export default function App() {
           <PlayerProvider>
             <BrowserRouter>
               <div className="min-h-screen bg-app text-app-text">
-                <YouTubeMount />
-
                 <Routes>
-                  {/* 1) Hero/Landing Page */}
+                  {/* Landing */}
                   <Route path="/" element={<Hero />} />
 
-                  {/* 2) Auth Gate */}
+                  {/* Auth */}
                   <Route path="/auth" element={<AuthGate />} />
+                  <Route path="/reset" element={<ResetPassword />} />
 
-                  {/* 3) Protected App Routes */}
+                  {/* Protected App */}
                   <Route
                     path="/app/*"
                     element={
@@ -40,13 +39,11 @@ export default function App() {
                     }
                   />
 
-                  {/* Reset Password Route */}
-                  <Route path="/reset-password" element={<ResetPassword />} />
-
-                  {/* Fallback */}
+                  {/* Fallback → landing */}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
 
+                {/* Global player (single instance) */}
                 <PlayerBar />
               </div>
             </BrowserRouter>

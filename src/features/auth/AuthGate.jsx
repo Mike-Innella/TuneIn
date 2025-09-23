@@ -8,7 +8,12 @@ export default function AuthGate() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     supabase.auth.getSession().then(({ data }) => {
+      console.log('[AuthGate] Initial session check:', !!data.session);
+      if (!mounted) return;
+
       if (data.session) {
         nav("/app", { replace: true });
       } else {
@@ -17,12 +22,22 @@ export default function AuthGate() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthGate] Auth state change:', event, !!session);
+      if (!mounted) return;
+
       if (event === 'SIGNED_IN' && session) {
         nav("/app", { replace: true });
+      } else if (event === 'SIGNED_OUT') {
+        setLoading(false);
+      } else if (!session && event !== 'INITIAL_SESSION') {
+        setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [nav]);
 
   if (loading) {
