@@ -31,7 +31,7 @@ const ISO8601toSeconds = (dur) => {
   return h * 3600 + mn * 60 + s
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
     const apiKey = process.env.YT_API_KEY || process.env.YOUTUBE_API_KEY
     if (!apiKey) {
