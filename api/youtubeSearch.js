@@ -90,12 +90,16 @@ export default async function handler(req, res) {
 
     // Simple mode (TS compatibility): return basic info without duration filtering
     if (!useDetailedMode) {
-      const items = searchItems.map(it => ({
-        id: it?.id?.videoId,
-        title: it?.snippet?.title,
-        artist: it?.snippet?.channelTitle,
-        artwork: it?.snippet?.thumbnails?.medium?.url || it?.snippet?.thumbnails?.default?.url,
-      })).filter(x => x.id)
+      const items = searchItems.map(it => {
+        const _id = it?.id?.videoId
+        return {
+          id: _id,
+          videoId: _id,
+          title: it?.snippet?.title,
+          artist: it?.snippet?.channelTitle,
+          artwork: it?.snippet?.thumbnails?.medium?.url || it?.snippet?.thumbnails?.default?.url,
+        }
+      }).filter(x => x.id)
 
       const videoIds = items.map(i => i.id)
       return res.status(200).json({
@@ -122,15 +126,19 @@ export default async function handler(req, res) {
     })
 
     // shape response that client expects
-    const items = filtered.map(v => ({
-      id: v.id,
-      title: v?.snippet?.title || '',
-      channelTitle: v?.snippet?.channelTitle || '',
-      duration: v?.contentDetails?.duration || 'PT0S',
-      seconds: ISO8601toSeconds(v?.contentDetails?.duration || 'PT0S'),
-      embeddable: v?.status?.embeddable !== false,
-      thumbnails: v?.snippet?.thumbnails || {},
-    }))
+    const items = filtered.map(v => {
+      const _id = v.id
+      return {
+        id: _id,
+        videoId: _id,
+        title: v?.snippet?.title || '',
+        channelTitle: v?.snippet?.channelTitle || '',
+        duration: v?.contentDetails?.duration || 'PT0S',
+        seconds: ISO8601toSeconds(v?.contentDetails?.duration || 'PT0S'),
+        embeddable: v?.status?.embeddable !== false,
+        thumbnails: v?.snippet?.thumbnails || {},
+      }
+    })
 
     if (items.length === 0) {
       console.warn('[youtubeSearch] 0 after filtering; relaxing rules and retrying once...')
@@ -139,15 +147,19 @@ export default async function handler(req, res) {
         const dur = ISO8601toSeconds(v?.contentDetails?.duration || 'PT0S')
         const emb = v?.status?.embeddable !== false
         return emb && dur >= 30 && dur <= (2 * 60 * 60) // 30s–2h
-      }).map(v => ({
-        id: v.id,
-        title: v?.snippet?.title || '',
-        channelTitle: v?.snippet?.channelTitle || '',
-        duration: v?.contentDetails?.duration || 'PT0S',
-        seconds: ISO8601toSeconds(v?.contentDetails?.duration || 'PT0S'),
-        embeddable: v?.status?.embeddable !== false,
-        thumbnails: v?.snippet?.thumbnails || {},
-      }))
+      }).map(v => {
+        const _id = v.id
+        return {
+          id: _id,
+          videoId: _id,
+          title: v?.snippet?.title || '',
+          channelTitle: v?.snippet?.channelTitle || '',
+          duration: v?.contentDetails?.duration || 'PT0S',
+          seconds: ISO8601toSeconds(v?.contentDetails?.duration || 'PT0S'),
+          embeddable: v?.status?.embeddable !== false,
+          thumbnails: v?.snippet?.thumbnails || {},
+        }
+      })
       return res.json({ items: relaxed })
     }
 

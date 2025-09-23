@@ -21,19 +21,17 @@ export default function MoodPicker() {
       const query = MOOD_QUERIES[mood] || `${mood} instrumental focus music`;
 
       // 2) Search YouTube using new backend
-      const { items } = await searchYouTube(query);
+      const { items: raw = [] } = await searchYouTube(query);
+      const items = raw
+        .map(v => ({ ...v, videoId: v.videoId || v.id }))
+        .filter(v => !!v.videoId);
 
-      if (!items || items.length === 0) {
-        setSearchError("No results. Try a different mood.");
-        return;
-      }
-
-      // Choose first result; you can add shuffle later:
-      const first = items[0];
-      if (!first.videoId) {
+      if (items.length === 0) {
         setSearchError("No valid videos found.");
         return;
       }
+
+      const first = items[0];
 
       // 3) Dispatch player load event with videoId and playlist
       window.dispatchEvent(new CustomEvent("player:load", {
