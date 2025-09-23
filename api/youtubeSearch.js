@@ -1,8 +1,10 @@
 'use strict'
 
-// Vercel Node runtime
+// Vercel Node runtime - Combined YouTube Search API
 // env: YT_API_KEY (server-side only)
-// GET /api/youtubeSearch?q=lofi%20study&max=25
+// Supports both detailed search with duration filtering and simple search
+// GET /api/youtubeSearch?q=lofi%20study&max=25 (detailed mode)
+// GET /api/youtubeSearch?mood=relaxing (simple mode for TS compatibility)
 
 const fetchJson = async (url) => {
   const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
@@ -33,18 +35,24 @@ module.exports = async (req, res) => {
   try {
     const apiKey = process.env.YT_API_KEY || process.env.YOUTUBE_API_KEY
     if (!apiKey) {
-      return res.status(500).json({ error: 'Missing YT_API_KEY' })
+      return res.status(500).json({ error: 'server_error', details: 'Missing YT_API_KEY' })
     }
 
-    const { q = '', max = '25', region = 'US' } = req.query
+    // Support both query modes: direct query (q) and mood-based (mood)
+    const { q: directQuery, mood = '', max = '25', region = 'US', pageToken } = req.query
+
+    // If mood is provided, construct a lofi-focused query; otherwise use direct query
+    const query = (directQuery || (mood ? `${mood} lofi beats instrumental -lyrics` : 'lofi hip hop beats')).trim()
     const maxResults = clampInt(max, 5, 50, 25)
-    const query = String(q).trim()
 
     if (!query) {
       return res.status(400).json({ error: 'Missing query ?q=' })
     }
 
     console.log('[youtubeSearch] query:', query)
+
+    // Determine response mode based on whether detailed info is needed
+    const useDetailedMode = directQuery && !mood
 
     // STEP 1: search
     const searchURL = new URL('https://www.googleapis.com/youtube/v3/search')
@@ -54,22 +62,50 @@ module.exports = async (req, res) => {
     searchURL.searchParams.set('q', query)
     searchURL.searchParams.set('safeSearch', 'moderate')
     searchURL.searchParams.set('videoEmbeddable', 'true')
-    // videoSyndicated can be overly strict; leave OFF unless you must
-    // searchURL.searchParams.set('videoSyndicated','true')
-    searchURL.searchParams.set('regionCode', region)
+
+    // Include videoSyndicated for mood-based queries (TS mode)
+    if (mood) {
+      searchURL.searchParams.set('videoSyndicated', 'true')
+    }
+
+    if (region) {
+      searchURL.searchParams.set('regionCode', region)
+    }
+    if (pageToken) {
+      searchURL.searchParams.set('pageToken', pageToken)
+    }
     searchURL.searchParams.set('key', apiKey)
 
     const search = await fetchJson(searchURL.toString())
-    const ids = (search.items || [])
+    const searchItems = search.items || []
+
+    if (searchItems.length === 0) {
+      console.warn('[youtubeSearch] search returned 0 items for:', query)
+      return res.json({ items: [], videoIds: [], nextPageToken: null })
+    }
+
+    const ids = searchItems
       .map(it => it?.id?.videoId)
       .filter(Boolean)
 
-    if (ids.length === 0) {
-      console.warn('[youtubeSearch] search returned 0 items for:', query)
-      return res.json({ items: [] })
+    // Simple mode (TS compatibility): return basic info without duration filtering
+    if (!useDetailedMode) {
+      const items = searchItems.map(it => ({
+        id: it?.id?.videoId,
+        title: it?.snippet?.title,
+        artist: it?.snippet?.channelTitle,
+        artwork: it?.snippet?.thumbnails?.medium?.url || it?.snippet?.thumbnails?.default?.url,
+      })).filter(x => x.id)
+
+      const videoIds = items.map(i => i.id)
+      return res.status(200).json({
+        videoIds,
+        items,
+        nextPageToken: search.nextPageToken || null
+      })
     }
 
-    // STEP 2: fetch details for duration/embeddable checks
+    // Detailed mode (JS compatibility): fetch details for duration/embeddable checks
     const detailsURL = new URL('https://www.googleapis.com/youtube/v3/videos')
     detailsURL.searchParams.set('part', 'contentDetails,statistics,status,snippet')
     detailsURL.searchParams.set('id', ids.join(','))
@@ -118,6 +154,6 @@ module.exports = async (req, res) => {
     return res.json({ items })
   } catch (err) {
     console.error('[youtubeSearch] fatal:', err)
-    return res.status(500).json({ error: String(err.message || err) })
+    return res.status(500).json({ error: 'server_error', details: String(err.message || err) })
   }
 }
